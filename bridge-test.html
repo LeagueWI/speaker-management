@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Speaker Management Bridge Test</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#1f2933}button{padding:10px 14px;margin:4px;border:1px solid #ccd6df;border-radius:8px;background:#fff;cursor:pointer}button.primary{background:#245b84;color:#fff;border-color:#245b84}pre{white-space:pre-wrap;background:#f5f7fa;border:1px solid #d9e2ec;padding:16px;border-radius:10px;min-height:180px}.note{padding:12px 14px;background:#fff9e8;border:1px solid #ead69a;border-radius:8px;margin:16px 0}</style>
+</head>
+<body>
+<h1>Speaker Management Bridge Test</h1>
+<p>This page tests the Cloudflare → Jotform bridge without exposing the Jotform API key.</p>
+<div class="note">Run <strong>Health</strong> first. Run <strong>Setup</strong> only after the JOTFORM_API_KEY secret has been added in Cloudflare. Setup creates two hidden Jotform forms if they do not already exist.</div>
+<button class="primary" id="health">Health</button>
+<button id="setup">Setup Jotform forms</button>
+<button id="state">Load shared state</button>
+<pre id="out">Ready.</pre>
+<script>
+const out=document.getElementById('out');
+async function call(path, method='GET'){
+  out.textContent='Working…';
+  try{
+    const r=await fetch(path,{method,headers:{'content-type':'application/json'}});
+    const data=await r.json();
+    out.textContent=JSON.stringify(data,null,2);
+  }catch(e){out.textContent='Error: '+e.message;}
+}
+document.getElementById('health').onclick=()=>call('/api/health');
+document.getElementById('setup').onclick=()=>call('/api/setup','POST');
+document.getElementById('state').onclick=()=>call('/api/state');
+</script>
+</body>
+</html>
