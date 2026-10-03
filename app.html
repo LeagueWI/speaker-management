@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>League Speaker Management</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <aside class="sidebar">
+    <div class="brand"><h1>League Speaker Management</h1><p>Multi-event administration</p></div>
+    <nav class="nav" aria-label="Primary navigation">
+      <button class="active" data-view="dashboard">Dashboard</button>
+      <button data-view="events">Events</button>
+      <button data-view="speakers">Speakers</button>
+      <button data-view="import">Import / Export</button>
+      <button data-view="email">Email Center</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="sidebar-note">Shared records are stored in Jotform through the protected Cloudflare bridge.</div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <div><h2 id="pageTitle">Dashboard</h2><small id="pageSubtitle">Speaker readiness across all active events</small></div>
+      <div class="toolbar-right"><span class="connection"><span class="dot" id="connectionDot"></span><span id="connectionText">Connecting…</span></span><button class="btn primary" id="quickAddSpeaker">+ Add speaker</button></div>
+    </header>
+    <div class="content">
+      <section class="view active" id="view-dashboard">
+        <div id="globalNotice" class="notice-slot"></div>
+        <div class="grid cards" id="dashboardCards"></div>
+        <div class="panel"><div class="toolbar"><div><h3>Event readiness</h3><div class="hint">Track multiple events at the same time.</div></div><button class="btn small" id="refreshDataBtn">Refresh</button></div><div id="eventReadiness"></div></div>
+        <div class="panel"><h3>Needs attention</h3><div id="attentionList"></div></div>
+      </section>
+      <section class="view" id="view-events">
+        <div class="toolbar"><div class="hint">Create separate event records so speakers can be managed concurrently.</div><button class="btn primary" id="addEventBtn">+ Add event</button></div>
+        <div class="panel table-wrap"><div id="eventsTable"></div></div>
+      </section>
+      <section class="view" id="view-speakers">
+        <div class="toolbar"><div class="toolbar-left"><select id="speakerEventFilter"><option value="">All events</option></select><select id="speakerStatusFilter"><option value="">All statuses</option><option>Invited</option><option>Confirmed</option><option>Declined</option><option>Ready</option><option>Complete</option></select><input id="speakerSearch" placeholder="Search speaker, organization, session"></div><button class="btn primary" id="addSpeakerBtn">+ Add speaker</button></div>
+        <div class="panel table-wrap"><div id="speakersTable"></div></div>
+      </section>
+      <section class="view" id="view-import">
+        <div class="grid two-col"><div class="panel"><h3>1. Download template</h3><p class="hint">Use the template headers exactly as provided.</p><button class="btn primary" id="downloadTemplateBtn">Download Excel template</button></div><div class="panel"><h3>2. Export current data</h3><p class="hint">Export all shared event and speaker records.</p><button class="btn" id="exportDataBtn">Export speaker data</button></div></div>
+        <div class="panel"><h3>3. Import or update speaker records</h3><div class="import-zone"><strong>Upload an Excel workbook</strong><div class="hint">Accepted: .xlsx and .xls. The first worksheet is processed.</div><input id="excelUpload" type="file" accept=".xlsx,.xls"></div><div id="importResult"></div></div>
+        <div class="panel"><h3>Update matching</h3><div class="notice">Rows are treated as updates when <strong>Event Name + Speaker Email + Session Title</strong> match an existing record. Blank imported cells do not erase existing values.</div></div>
+      </section>
+      <section class="view" id="view-email">
+        <div class="grid email-grid"><div class="panel"><h3>Recipients</h3><div class="field"><label>Event</label><select id="emailEventFilter"><option value="">Choose an event</option></select></div><div class="field"><label>Speaker status</label><select id="emailStatusFilter"><option value="">Any status</option><option>Invited</option><option>Confirmed</option><option>Ready</option><option>Complete</option></select></div><div class="recipient-list" id="recipientList"><div class="empty">Choose an event to load speakers.</div></div></div>
+        <div class="panel"><h3>Compose email</h3><div class="form-grid two"><div class="field"><label>Template</label><select id="emailTemplate"><option value="materials">Materials reminder</option><option value="invitation">Invitation</option><option value="logistics">Final logistics</option><option value="thanks">Thank you</option><option value="custom">Custom</option></select></div><div class="field"><label>Subject</label><input id="emailSubject"></div><div class="field span-2"><label>Message</label><textarea id="emailBody" class="email-body"></textarea></div></div><p class="hint">Merge fields: {{first_name}}, {{last_name}}, {{event_name}}, {{session_title}}, {{session_date}}, {{session_time}}, {{room}}.</p><div class="toolbar"><div class="toolbar-left"><button class="btn" id="previewEmailBtn">Preview first selected</button><button class="btn primary" id="openEmailClientBtn">Open in email client</button></div><button class="btn primary" id="sendConnectedBtn" disabled>Send through Jotform</button></div><div class="notice warning">The dispatcher is connected, but direct sending remains disabled until its Jotform autoresponder is configured and tested.</div><div id="emailPreviewWrap" class="hidden"><div class="email-preview" id="emailPreview"></div></div></div></div>
+      </section>
+      <section class="view" id="view-settings">
+        <div class="panel"><h3>Connection</h3><div id="connectionDetail" class="notice">Checking Cloudflare → Jotform connection…</div><div class="toolbar"><div></div><button class="btn" id="settingsRefreshBtn">Refresh shared data</button></div></div>
+        <div class="panel"><h3>Email defaults</h3><p class="hint">These convenience settings remain in this browser. They are not credentials or operational records.</p><div class="form-grid two"><div class="field"><label>From name</label><input id="settingFromName"></div><div class="field"><label>Reply-to email</label><input id="settingFromEmail" type="email"></div></div><div class="toolbar"><div></div><button class="btn primary" id="saveSettingsBtn">Save defaults</button></div></div>
+        <div class="panel"><h3>Data architecture</h3><div class="notice">Events and speakers are shared records in Jotform. The operational data set is no longer stored in browser localStorage.</div></div>
+      </section>
+    </div>
+  </main>
+</div>
+<dialog id="eventDialog"><form method="dialog"><div class="modal-head"><h3 id="eventDialogTitle">Add event</h3><button class="btn small" value="cancel">Close</button></div><div class="modal-body"><input type="hidden" id="eventId"><div class="form-grid two"><div class="field span-2"><label>Event name *</label><input id="eventName" required></div><div class="field"><label>Start date</label><input id="eventStartDate" type="date"></div><div class="field"><label>End date</label><input id="eventEndDate" type="date"></div><div class="field span-2"><label>Location</label><input id="eventLocation"></div><div class="field"><label>Status</label><select id="eventStatus"><option>Planning</option><option>Active</option><option>Complete</option><option>Archived</option></select></div><div class="field"><label>Internal owner</label><input id="eventOwner"></div></div></div><div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button type="button" class="btn primary" id="saveEventBtn">Save event</button></div></form></dialog>
+<dialog id="speakerDialog"><form method="dialog"><div class="modal-head"><h3 id="speakerDialogTitle">Add speaker</h3><button class="btn small" value="cancel">Close</button></div><div class="modal-body"><input type="hidden" id="speakerId"><div class="form-grid"><div class="field span-3"><label>Event *</label><select id="speakerEventId" required></select></div><div class="field"><label>First name *</label><input id="speakerFirstName" required></div><div class="field"><label>Last name *</label><input id="speakerLastName" required></div><div class="field"><label>Email *</label><input id="speakerEmail" type="email" required></div><div class="field"><label>Title</label><input id="speakerTitle"></div><div class="field"><label>Organization</label><input id="speakerOrganization"></div><div class="field"><label>Speaker status</label><select id="speakerStatus"><option>Invited</option><option>Confirmed</option><option>Declined</option><option>Ready</option><option>Complete</option></select></div><div class="field span-2"><label>Session title *</label><input id="speakerSessionTitle" required></div><div class="field"><label>Room</label><input id="speakerRoom"></div><div class="field"><label>Session date</label><input id="speakerSessionDate" type="date"></div><div class="field"><label>Session time</label><input id="speakerSessionTime" placeholder="9:15 AM–10:05 AM"></div><div class="field"><label>Internal owner</label><input id="speakerOwner"></div><div class="field"><label>Bio</label><select id="speakerBioStatus"><option>Missing</option><option>Received</option><option>Approved</option></select></div><div class="field"><label>Headshot</label><select id="speakerHeadshotStatus"><option>Missing</option><option>Received</option><option>Approved</option></select></div><div class="field"><label>Slides</label><select id="speakerSlidesStatus"><option>Not required</option><option>Missing</option><option>Received</option><option>Approved</option></select></div><div class="field"><label>Registration</label><select id="speakerRegistrationStatus"><option>Not started</option><option>Complete</option><option>Not required</option></select></div><div class="field"><label>Logistics</label><select id="speakerLogisticsStatus"><option>Not sent</option><option>Sent</option><option>Acknowledged</option></select></div><div class="field"><label>AV needs</label><input id="speakerAvNeeds"></div><div class="field span-3"><label>Notes</label><textarea id="speakerNotes"></textarea></div></div></div><div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button type="button" class="btn primary" id="saveSpeakerBtn">Save speaker</button></div></form></dialog>
+<script src="/app.js"></script>
+</body>
+</html>
