@@ -3,6 +3,10 @@
   "name": "speaker-management",
   "main": "./src/index.js",
   "compatibility_date": "2026-10-03",
+  "vars": {
+    "JOTFORM_DATA_FORM_ID": "262756516354160",
+    "JOTFORM_EMAIL_FORM_ID": "262755955143162"
+  },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
