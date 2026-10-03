@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>League Speaker Management</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --navy: #16324f;
+      --blue: #245b84;
+      --light-blue: #eaf2f8;
+      --ink: #1f2933;
+      --muted: #66788a;
+      --line: #d9e2ec;
+      --bg: #f5f7fa;
+      --white: #ffffff;
+      --success: #256b4a;
+      --warning: #9a6700;
+      --danger: #a12a2a;
+      --shadow: 0 8px 24px rgba(22, 50, 79, 0.08);
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell { min-height: 100vh; display: grid; grid-template-columns: 250px 1fr; }
+    .sidebar {
+      background: var(--navy);
+      color: white;
+      padding: 26px 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .brand { margin-bottom: 28px; }
+    .brand h1 { font-size: 1.05rem; margin: 0 0 5px; line-height: 1.25; }
+    .brand p { margin: 0; color: #c7d7e5; font-size: 0.82rem; }
+    .nav { display: grid; gap: 7px; }
+    .nav button {
+      border: 0;
+      background: transparent;
+      color: #dbe8f2;
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 8px;
+    }
+    .nav button.active, .nav button:hover { background: rgba(255,255,255,.11); color: white; }
+    .sidebar-note {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 20px;
+      font-size: .75rem;
+      line-height: 1.45;
+      color: #bcd0df;
+    }
+
+    main { min-width: 0; }
+    .topbar {
+      min-height: 74px;
+      padding: 16px 28px;
+      background: white;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .topbar h2 { margin: 0; font-size: 1.25rem; }
+    .topbar small { color: var(--muted); }
+    .content { padding: 28px; max-width: 1500px; margin: 0 auto; }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .toolbar-left, .toolbar-right { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      padding: 9px 13px;
+      border-radius: 8px;
+      font-weight: 650;
+    }
+    .btn:hover { border-color: #a8bac9; }
+    .btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+    .btn.danger { color: var(--danger); }
+    .btn.small { padding: 6px 9px; font-size: .83rem; }
+    .btn:disabled { cursor: not-allowed; opacity: .5; }
+
+    .grid { display: grid; gap: 16px; }
+    .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 22px; }
+    .card, .panel {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card { padding: 19px; }
+    .card .label { font-size: .8rem; color: var(--muted); margin-bottom: 8px; }
+    .card .value { font-size: 1.85rem; font-weight: 750; line-height: 1; }
+    .card .sub { margin-top: 8px; font-size: .78rem; color: var(--muted); }
+    .panel { padding: 20px; margin-bottom: 18px; }
+    .panel h3 { margin: 0 0 14px; font-size: 1rem; }
+
+    .status-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .status-box { border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+    .status-box strong { display: block; margin-bottom: 5px; }
+    .status-box span { font-size: .85rem; color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    th { text-align: left; color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; background: #f8fafc; }
+    th, td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tbody tr:hover { background: #fbfdff; }
+    .table-wrap { overflow-x: auto; }
+    .empty { padding: 34px 16px; text-align: center; color: var(--muted); }
+
+    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 8px; font-size: .73rem; font-weight: 700; white-space: nowrap; }
+    .badge.success { background: #e8f5ee; color: var(--success); }
+    .badge.warning { background: #fff5d6; color: var(--warning); }
+    .badge.neutral { background: #edf2f7; color: #526574; }
+    .badge.danger { background: #fdecec; color: var(--danger); }
+
+    .field { display: grid; gap: 6px; }
+    .field label { font-size: .78rem; font-weight: 700; color: #415466; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #cbd5df;
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: white;
+      color: var(--ink);
+    }
+    textarea { min-height: 95px; resize: vertical; }
+    .form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .form-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+    .hint { font-size: .78rem; line-height: 1.45; color: var(--muted); }
+    .notice { padding: 12px 14px; background: var(--light-blue); border: 1px solid #c9ddeb; border-radius: 9px; color: #294861; font-size: .85rem; line-height: 1.5; }
+    .notice.warning { background: #fff9e8; border-color: #ead69a; color: #6d5310; }
+
+    dialog { border: 0; border-radius: 13px; width: min(900px, 94vw); max-height: 90vh; padding: 0; box-shadow: 0 24px 70px rgba(0,0,0,.25); }
+    dialog::backdrop { background: rgba(16, 35, 52, .55); }
+    .modal-head { padding: 18px 21px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+    .modal-head h3 { margin: 0; }
+    .modal-body { padding: 21px; overflow-y: auto; max-height: 68vh; }
+    .modal-foot { padding: 16px 21px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 9px; }
+
+    .import-zone {
+      border: 2px dashed #aec4d4;
+      border-radius: 12px;
+      background: #f9fcfe;
+      padding: 28px;
+      text-align: center;
+    }
+    .import-zone input { max-width: 420px; margin: 13px auto 0; }
+    .email-preview { white-space: pre-wrap; background: #f8fafc; border: 1px solid var(--line); border-radius: 9px; padding: 14px; min-height: 150px; font-size: .85rem; }
+    .recipient-list { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 9px; padding: 8px; }
+    .recipient-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-bottom: 1px solid #eef2f5; }
+    .recipient-row:last-child { border-bottom: 0; }
+    .recipient-row input { width: auto; margin-top: 3px; }
+    .muted { color: var(--muted); }
+
+    @media (max-width: 1050px) {
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+      .span-3 { grid-column: span 2; }
+    }
+    @media (max-width: 760px) {
+      .app-shell { display: block; }
+      .sidebar { position: static; height: auto; padding: 16px; }
+      .brand { margin-bottom: 14px; }
+      .nav { grid-template-columns: repeat(3, 1fr); }
+      .sidebar-note { display: none; }
+      .topbar { position: static; padding: 14px 18px; }
+      .content { padding: 18px; }
+      .cards, .status-grid, .form-grid, .form-grid.two { grid-template-columns: 1fr; }
+      .span-2, .span-3 { grid-column: span 1; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>League Speaker Management</h1>
+      <p>Multi-event administration</p>
+    </div>
+    <nav class="nav" aria-label="Primary navigation">
+      <button class="active" data-view="dashboard">Dashboard</button>
+      <button data-view="events">Events</button>
+      <button data-view="speakers">Speakers</button>
+      <button data-view="import">Import / Export</button>
+      <button data-view="email">Email Center</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="sidebar-note">Prototype data is stored only in this browser. Do not rely on it as the permanent system of record.</div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <h2 id="pageTitle">Dashboard</h2>
+        <small id="pageSubtitle">Speaker readiness across all active events</small>
+      </div>
+      <button class="btn primary" id="quickAddSpeaker">+ Add speaker</button>
+    </header>
+
+    <div class="content">
+      <section class="view active" id="view-dashboard">
+        <div class="grid cards" id="dashboardCards"></div>
+        <div class="panel">
+          <div class="toolbar">
+            <div><h3 style="margin:0">Event readiness</h3><div class="hint">Track multiple events at the same time.</div></div>
+          </div>
+          <div id="eventReadiness"></div>
+        </div>
+        <div class="panel">
+          <h3>Needs attention</h3>
+          <div id="attentionList"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-events">
+        <div class="toolbar">
+          <div class="hint">Create separate event records so speakers can be managed concurrently.</div>
+          <button class="btn primary" id="addEventBtn">+ Add event</button>
+        </div>
+        <div class="panel table-wrap"><div id="eventsTable"></div></div>
+      </section>
+
+      <section class="view" id="view-speakers">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="speakerEventFilter" aria-label="Filter by event"><option value="">All events</option></select>
+            <select id="speakerStatusFilter" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <option>Invited</option><option>Confirmed</option><option>Declined</option><option>Ready</option><option>Complete</option>
+            </select>
+            <input id="speakerSearch" placeholder="Search speaker, organization, session" aria-label="Search speakers" />
+          </div>
+          <button class="btn primary" id="addSpeakerBtn">+ Add speaker</button>
+        </div>
+        <div class="panel table-wrap"><div id="speakersTable"></div></div>
+      </section>
+
+      <section class="view" id="view-import">
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div class="panel">
+            <h3>1. Download template</h3>
+            <p class="hint">Use the template headers exactly as provided. You can add new speakers or update existing records later using the same file structure.</p>
+            <button class="btn primary" id="downloadTemplateBtn">Download Excel template</button>
+          </div>
+          <div class="panel">
+            <h3>2. Export current data</h3>
+            <p class="hint">Export all current event and speaker records for review, backup, or bulk editing.</p>
+            <button class="btn" id="exportDataBtn">Export speaker data</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>3. Import or update speaker records</h3>
+          <div class="import-zone">
+            <strong>Upload an Excel workbook</strong>
+            <div class="hint">Accepted: .xlsx and .xls. The first worksheet is processed.</div>
+            <input id="excelUpload" type="file" accept=".xlsx,.xls" />
+          </div>
+          <div id="importResult" style="margin-top:14px"></div>
+        </div>
+        <div class="panel">
+          <h3>Update matching</h3>
+          <div class="notice">Rows are treated as updates when <strong>Event Name + Speaker Email + Session Title</strong> match an existing record. Blank imported cells do not erase existing values. This allows the same workbook structure to be used for recurring updates.</div>
+        </div>
+      </section>
+
+      <section class="view" id="view-email">
+        <div class="grid" style="grid-template-columns: minmax(280px,.8fr) minmax(420px,1.2fr); gap:18px">
+          <div>
+            <div class="panel">
+              <h3>Recipients</h3>
+              <div class="field" style="margin-bottom:12px"><label>Event</label><select id="emailEventFilter"><option value="">Choose an event</option></select></div>
+              <div class="field" style="margin-bottom:12px"><label>Speaker status</label><select id="emailStatusFilter"><option value="">Any status</option><option>Invited</option><option>Confirmed</option><option>Ready</option><option>Complete</option></select></div>
+              <div class="recipient-list" id="recipientList"><div class="empty">Choose an event to load speakers.</div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Compose email</h3>
+            <div class="form-grid two">
+              <div class="field"><label>Template</label><select id="emailTemplate"><option value="materials">Materials reminder</option><option value="invitation">Invitation</option><option value="logistics">Final logistics</option><option value="thanks">Thank you</option><option value="custom">Custom</option></select></div>
+              <div class="field"><label>Subject</label><input id="emailSubject" /></div>
+              <div class="field span-2"><label>Message</label><textarea id="emailBody" style="min-height:230px"></textarea></div>
+            </div>
+            <p class="hint">Available merge fields: {{first_name}}, {{last_name}}, {{event_name}}, {{session_title}}, {{session_date}}, {{session_time}}, {{room}}.</p>
+            <div class="toolbar" style="margin:15px 0 0">
+              <div class="toolbar-left">
+                <button class="btn" id="previewEmailBtn">Preview first selected</button>
+                <button class="btn primary" id="openEmailClientBtn">Open in email client</button>
+              </div>
+              <button class="btn primary" id="sendConnectedBtn" disabled>Send through connected service</button>
+            </div>
+            <div id="emailConnectionNote" class="notice warning" style="margin-top:12px">Direct sending is not connected yet. The working MVP can open addressed messages in your default email client. Add a secure Microsoft 365 or email API endpoint in Settings to enable direct sends.</div>
+            <div id="emailPreviewWrap" style="display:none;margin-top:14px"><div class="email-preview" id="emailPreview"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="panel">
+          <h3>Email integration</h3>
+          <div class="notice warning" style="margin-bottom:16px">Do not place Microsoft credentials, API keys, or passwords in this public repository or browser code. Direct sending should route through a secure server-side endpoint.</div>
+          <div class="form-grid two">
+            <div class="field"><label>From name</label><input id="settingFromName" placeholder="League of Wisconsin Municipalities" /></div>
+            <div class="field"><label>From email</label><input id="settingFromEmail" type="email" placeholder="training@..." /></div>
+            <div class="field span-2"><label>Secure email API endpoint</label><input id="settingEmailEndpoint" placeholder="https://..." /></div>
+          </div>
+          <div class="toolbar" style="margin:16px 0 0"><div></div><button class="btn primary" id="saveSettingsBtn">Save settings</button></div>
+        </div>
+        <div class="panel">
+          <h3>Data</h3>
+          <p class="hint">The MVP stores event and speaker records in browser localStorage. This is suitable for workflow testing, but not as the final shared League data store.</p>
+          <button class="btn danger" id="clearDataBtn">Clear local prototype data</button>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<dialog id="eventDialog">
+  <form method="dialog" id="eventForm">
+    <div class="modal-head"><h3 id="eventDialogTitle">Add event</h3><button class="btn small" value="cancel">Close</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="eventId" />
+      <div class="form-grid two">
+        <div class="field span-2"><label>Event name *</label><input id="eventName" required /></div>
+        <div class="field"><label>Start date</label><input id="eventStartDate" type="date" /></div>
+        <div class="field"><label>End date</label><input id="eventEndDate" type="date" /></div>
+        <div class="field span-2"><label>Location</label><input id="eventLocation" /></div>
+        <div class="field"><label>Status</label><select id="eventStatus"><option>Planning</option><option>Active</option><option>Complete</option><option>Archived</option></select></div>
+        <div class="field"><label>Internal owner</label><input id="eventOwner" /></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button type="button" class="btn primary" id="saveEventBtn">Save event</button></div>
+  </form>
+</dialog>
+
+<dialog id="speakerDialog">
+  <form method="dialog" id="speakerForm">
+    <div class="modal-head"><h3 id="speakerDialogTitle">Add speaker</h3><button class="btn small" value="cancel">Close</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="speakerId" />
+      <div class="form-grid">
+        <div class="field span-3"><label>Event *</label><select id="speakerEventId" required></select></div>
+        <div class="field"><label>First name *</label><input id="speakerFirstName" required /></div>
+        <div class="field"><label>Last name *</label><input id="speakerLastName" required /></div>
+        <div class="field"><label>Email *</label><input id="speakerEmail" type="email" required /></div>
+        <div class="field"><label>Title</label><input id="speakerTitle" /></div>
+        <div class="field"><label>Organization</label><input id="speakerOrganization" /></div>
+        <div class="field"><label>Speaker status</label><select id="speakerStatus"><option>Invited</option><option>Confirmed</option><option>Declined</option><option>Ready</option><option>Complete</option></select></div>
+        <div class="field span-2"><label>Session title *</label><input id="speakerSessionTitle" required /></div>
+        <div class="field"><label>Room</label><input id="speakerRoom" /></div>
+        <div class="field"><label>Session date</label><input id="speakerSessionDate" type="date" /></div>
+        <div class="field"><label>Session time</label><input id="speakerSessionTime" placeholder="9:15 AM–10:05 AM" /></div>
+        <div class="field"><label>Internal owner</label><input id="speakerOwner" /></div>
+        <div class="field"><label>Bio</label><select id="speakerBioStatus"><option>Missing</option><option>Received</option><option>Approved</option></select></div>
+        <div class="field"><label>Headshot</label><select id="speakerHeadshotStatus"><option>Missing</option><option>Received</option><option>Approved</option></select></div>
+        <div class="field"><label>Slides</label><select id="speakerSlidesStatus"><option>Not required</option><option>Missing</option><option>Received</option><option>Approved</option></select></div>
+        <div class="field"><label>Registration</label><select id="speakerRegistrationStatus"><option>Not started</option><option>Complete</option><option>Not required</option></select></div>
+        <div class="field"><label>Logistics</label><select id="speakerLogisticsStatus"><option>Not sent</option><option>Sent</option><option>Acknowledged</option></select></div>
+        <div class="field"><label>AV needs</label><input id="speakerAvNeeds" /></div>
+        <div class="field span-3"><label>Notes</label><textarea id="speakerNotes"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" value="cancel">Cancel</button><button type="button" class="btn primary" id="saveSpeakerBtn">Save speaker</button></div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'leagueSpeakerManagement.v1';
+  const SETTINGS_KEY = 'leagueSpeakerManagement.settings.v1';
+  const headers = [
+    'Event Name','Event Start Date','Event End Date','Event Location','Event Status','Event Owner',
+    'First Name','Last Name','Email','Title','Organization','Speaker Status','Session Title','Session Date','Session Time','Room',
+    'Bio Status','Headshot Status','Slides Status','AV Needs','Registration Status','Logistics Status','Internal Owner','Notes'
+  ];
+
+  const emailTemplates = {
+    invitation: {
+      subject: 'Invitation to present at {{event_name}}',
+      body: `{{first_name}},\n\nWe would like to invite you to present at {{event_name}}. Your proposed session is “{{session_title}}.”\n\nPlease reply to confirm whether you are available to participate.\n\nThank you,`
+    },
+    materials: {
+      subject: '{{event_name}} speaker materials',
+      body: `{{first_name}},\n\nWe are preparing final speaker materials for {{event_name}} and are following up on your session, “{{session_title}}.”\n\nPlease send any outstanding speaker materials at your earliest convenience.\n\nThank you,`
+    },
+    logistics: {
+      subject: 'Final logistics for {{event_name}}',
+      body: `{{first_name}},\n\nBelow are the final details for your session at {{event_name}}.\n\nSession: {{session_title}}\nDate: {{session_date}}\nTime: {{session_time}}\nRoom: {{room}}\n\nThank you for joining us as a presenter.`
+    },
+    thanks: {
+      subject: 'Thank you for presenting at {{event_name}}',
+      body: `{{first_name}},\n\nThank you for presenting at {{event_name}}. We appreciate the time and expertise you shared with our members through “{{session_title}}.”\n\nThank you,`
+    },
+    custom: { subject: '', body: '' }
+  };
+
+  let state = loadState();
+  let settings = loadSettings();
+
+  function loadState() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (parsed && Array.isArray(parsed.events) && Array.isArray(parsed.speakers)) return parsed;
+    } catch (e) {}
+    return { events: [], speakers: [] };
+  }
+  function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); renderAll(); }
+  function loadSettings() {
+    try { return { fromName:'', fromEmail:'', emailEndpoint:'', ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') }; }
+    catch (e) { return { fromName:'', fromEmail:'', emailEndpoint:'' }; }
+  }
+  function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+  function uid(prefix='id') { return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`; }
+  function esc(v='') { return String(v).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+  function eventById(id) { return state.events.find(e => e.id === id); }
+  function fmtDate(v) { if (!v) return ''; const d = new Date(v + 'T12:00:00'); return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+  function normalize(v) { return String(v ?? '').trim(); }
+  function lower(v) { return normalize(v).toLowerCase(); }
+  function readiness(s) {
+    const checks = [
+      s.bioStatus && s.bioStatus !== 'Missing',
+      s.headshotStatus && s.headshotStatus !== 'Missing',
+      !['Missing',''].includes(s.slidesStatus),
+      ['Complete','Not required'].includes(s.registrationStatus),
+      ['Sent','Acknowledged'].includes(s.logisticsStatus)
+    ];
+    return checks.filter(Boolean).length;
+  }
+  function needsAttention(s) {
+    if (['Declined','Complete'].includes(s.speakerStatus)) return false;
+    return readiness(s) < 5;
+  }
+
+  const pageMeta = {
+    dashboard:['Dashboard','Speaker readiness across all active events'],
+    events:['Events','Manage multiple conferences, trainings, and programs'],
+    speakers:['Speakers','Maintain speaker and session records'],
+    import:['Import / Export','Bulk load, update, and export speaker information'],
+    email:['Email Center','Prepare speaker communications by event and status'],
+    settings:['Settings','Configure integrations and prototype behavior']
+  };
+
+  document.querySelectorAll('.nav button').forEach(btn => btn.addEventListener('click', () => showView(btn.dataset.view)));
+  function showView(name) {
+    document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${name}`));
+    document.getElementById('pageTitle').textContent = pageMeta[name][0];
+    document.getElementById('pageSubtitle').textContent = pageMeta[name][1];
+  }
+
+  function renderAll() {
+    renderDashboard(); renderEvents(); renderSpeakers(); populateEventSelects(); renderRecipients(); renderSettings();
+  }
+
+  function renderDashboard() {
+    const activeEvents = state.events.filter(e => ['Planning','Active'].includes(e.status)).length;
+    const total = state.speakers.length;
+    const ready = state.speakers.filter(s => s.speakerStatus === 'Ready' || readiness(s) === 5).length;
+    const attention = state.speakers.filter(needsAttention).length;
+    document.getElementById('dashboardCards').innerHTML = [
+      ['Active events',activeEvents,'Planning or active'],
+      ['Speakers',total,'Across all events'],
+      ['Ready',ready,'All readiness items complete'],
+      ['Needs attention',attention,'At least one readiness item missing']
+    ].map(([l,v,s]) => `<div class="card"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`).join('');
+
+    if (!state.events.length) {
+      document.getElementById('eventReadiness').innerHTML = '<div class="empty">No events yet. Add an event to begin.</div>';
+    } else {
+      document.getElementById('eventReadiness').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Event</th><th>Dates</th><th>Status</th><th>Speakers</th><th>Ready</th><th>Needs attention</th></tr></thead><tbody>${state.events.map(e => {
+        const speakers = state.speakers.filter(s => s.eventId === e.id);
+        const r = speakers.filter(s => s.speakerStatus === 'Ready' || readiness(s) === 5).length;
+        const a = speakers.filter(needsAttention).length;
+        return `<tr><td><strong>${esc(e.name)}</strong><br><span class="muted">${esc(e.location || '')}</span></td><td>${esc(fmtDate(e.startDate))}${e.endDate && e.endDate !== e.startDate ? ' – ' + esc(fmtDate(e.endDate)) : ''}</td><td>${badge(e.status)}</td><td>${speakers.length}</td><td>${r}</td><td>${a}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    }
+
+    const items = state.speakers.filter(needsAttention).slice(0,12);
+    document.getElementById('attentionList').innerHTML = items.length ? `<div class="table-wrap"><table><thead><tr><th>Speaker</th><th>Event</th><th>Session</th><th>Outstanding</th></tr></thead><tbody>${items.map(s => {
+      const missing = [];
+      if (s.bioStatus === 'Missing' || !s.bioStatus) missing.push('Bio');
+      if (s.headshotStatus === 'Missing' || !s.headshotStatus) missing.push('Headshot');
+      if (s.slidesStatus === 'Missing' || !s.slidesStatus) missing.push('Slides');
+      if (!['Complete','Not required'].includes(s.registrationStatus)) missing.push('Registration');
+      if (!['Sent','Acknowledged'].includes(s.logisticsStatus)) missing.push('Logistics');
+      return `<tr><td><strong>${esc(s.firstName)} ${esc(s.lastName)}</strong></td><td>${esc(eventById(s.eventId)?.name || '')}</td><td>${esc(s.sessionTitle)}</td><td>${missing.map(m=>`<span class="badge warning">${m}</span>`).join(' ')}</td></tr>`;
+    }).join('')}</tbody></table></div>` : '<div class="empty">No speaker records currently need attention.</div>';
+  }
+
+  function badge(value) {
+    const success = ['Active','Ready','Complete','Approved','Received','Sent','Acknowledged','Confirmed'].includes(value);
+    const danger = ['Declined'].includes(value);
+    const warning = ['Planning','Invited','Missing','Not sent','Not started'].includes(value);
+    return `<span class="badge ${success?'success':danger?'danger':warning?'warning':'neutral'}">${esc(value || '—')}</span>`;
+  }
+
+  function renderEvents() {
+    const el = document.getElementById('eventsTable');
+    if (!state.events.length) { el.innerHTML = '<div class="empty">No events yet.</div>'; return; }
+    el.innerHTML = `<table><thead><tr><th>Event</th><th>Dates</th><th>Location</th><th>Status</th><th>Owner</th><th>Speakers</th><th></th></tr></thead><tbody>${state.events.map(e => `<tr><td><strong>${esc(e.name)}</strong></td><td>${esc(fmtDate(e.startDate))}${e.endDate && e.endDate !== e.startDate ? ' – ' + esc(fmtDate(e.endDate)) : ''}</td><td>${esc(e.location || '')}</td><td>${badge(e.status)}</td><td>${esc(e.owner || '')}</td><td>${state.speakers.filter(s=>s.eventId===e.id).length}</td><td><button class="btn small" onclick="window.SM.editEvent('${e.id}')">Edit</button> <button class="btn small danger" onclick="window.SM.deleteEvent('${e.id}')">Delete</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  function renderSpeakers() {
+    const eventFilter = document.getElementById('speakerEventFilter')?.value || '';
+    const statusFilter = document.getElementById('speakerStatusFilter')?.value || '';
+    const q = lower(document.getElementById('speakerSearch')?.value || '');
+    let speakers = [...state.speakers];
+    if (eventFilter) speakers = speakers.filter(s=>s.eventId===eventFilter);
+    if (statusFilter) speakers = speakers.filter(s=>s.speakerStatus===statusFilter);
+    if (q) speakers = speakers.filter(s => [s.firstName,s.lastName,s.email,s.organization,s.sessionTitle,eventById(s.eventId)?.name].some(v=>lower(v).includes(q)));
+    const el = document.getElementById('speakersTable');
+    if (!speakers.length) { el.innerHTML = '<div class="empty">No speakers match the current filters.</div>'; return; }
+    el.innerHTML = `<table><thead><tr><th>Speaker</th><th>Event</th><th>Session</th><th>Status</th><th>Bio</th><th>Headshot</th><th>Slides</th><th>Registration</th><th>Logistics</th><th></th></tr></thead><tbody>${speakers.map(s=>`<tr><td><strong>${esc(s.firstName)} ${esc(s.lastName)}</strong><br><span class="muted">${esc(s.organization||'')}<br>${esc(s.email)}</span></td><td>${esc(eventById(s.eventId)?.name || '')}</td><td>${esc(s.sessionTitle)}<br><span class="muted">${esc(fmtDate(s.sessionDate))} ${esc(s.sessionTime||'')}</span></td><td>${badge(s.speakerStatus)}</td><td>${badge(s.bioStatus)}</td><td>${badge(s.headshotStatus)}</td><td>${badge(s.slidesStatus)}</td><td>${badge(s.registrationStatus)}</td><td>${badge(s.logisticsStatus)}</td><td><button class="btn small" onclick="window.SM.editSpeaker('${s.id}')">Edit</button> <button class="btn small danger" onclick="window.SM.deleteSpeaker('${s.id}')">Delete</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  function populateEventSelects() {
+    const selectIds = ['speakerEventFilter','speakerEventId','emailEventFilter'];
+    selectIds.forEach(id => {
+      const select = document.getElementById(id); if (!select) return;
+      const prior = select.value;
+      const first = id==='speakerEventFilter' ? '<option value="">All events</option>' : id==='emailEventFilter' ? '<option value="">Choose an event</option>' : '<option value="">Choose an event</option>';
+      select.innerHTML = first + state.events.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+      if ([...select.options].some(o=>o.value===prior)) select.value = prior;
+    });
+  }
+
+  function openEventDialog(event=null) {
+    document.getElementById('eventDialogTitle').textContent = event ? 'Edit event' : 'Add event';
+    document.getElementById('eventId').value = event?.id || '';
+    document.getElementById('eventName').value = event?.name || '';
+    document.getElementById('eventStartDate').value = event?.startDate || '';
+    document.getElementById('eventEndDate').value = event?.endDate || '';
+    document.getElementById('eventLocation').value = event?.location || '';
+    document.getElementById('eventStatus').value = event?.status || 'Planning';
+    document.getElementById('eventOwner').value = event?.owner || '';
+    document.getElementById('eventDialog').showModal();
+  }
+
+  function saveEvent() {
+    const name = normalize(document.getElementById('eventName').value); if (!name) return alert('Event name is required.');
+    const id = document.getElementById('eventId').value;
+    const record = { id:id||uid('evt'), name, startDate:document.getElementById('eventStartDate').value, endDate:document.getElementById('eventEndDate').value, location:normalize(document.getElementById('eventLocation').value), status:document.getElementById('eventStatus').value, owner:normalize(document.getElementById('eventOwner').value) };
+    const idx = state.events.findIndex(e=>e.id===id);
+    if (idx>=0) state.events[idx]=record; else state.events.push(record);
+    document.getElementById('eventDialog').close(); saveState();
+  }
+
+  function openSpeakerDialog(speaker=null) {
+    if (!state.events.length) { alert('Create an event before adding speakers.'); showView('events'); return; }
+    populateEventSelects();
+    document.getElementById('speakerDialogTitle').textContent = speaker ? 'Edit speaker' : 'Add speaker';
+    const values = {
+      speakerId:speaker?.id||'', speakerEventId:speaker?.eventId||state.events[0]?.id||'', speakerFirstName:speaker?.firstName||'', speakerLastName:speaker?.lastName||'', speakerEmail:speaker?.email||'', speakerTitle:speaker?.title||'', speakerOrganization:speaker?.organization||'', speakerStatus:speaker?.speakerStatus||'Invited', speakerSessionTitle:speaker?.sessionTitle||'', speakerSessionDate:speaker?.sessionDate||'', speakerSessionTime:speaker?.sessionTime||'', speakerRoom:speaker?.room||'', speakerBioStatus:speaker?.bioStatus||'Missing', speakerHeadshotStatus:speaker?.headshotStatus||'Missing', speakerSlidesStatus:speaker?.slidesStatus||'Missing', speakerAvNeeds:speaker?.avNeeds||'', speakerRegistrationStatus:speaker?.registrationStatus||'Not started', speakerLogisticsStatus:speaker?.logisticsStatus||'Not sent', speakerOwner:speaker?.owner||'', speakerNotes:speaker?.notes||''
+    };
+    Object.entries(values).forEach(([id,v])=>document.getElementById(id).value=v);
+    document.getElementById('speakerDialog').showModal();
+  }
+
+  function saveSpeaker() {
+    const required = ['speakerEventId','speakerFirstName','speakerLastName','speakerEmail','speakerSessionTitle'];
+    if (required.some(id=>!normalize(document.getElementById(id).value))) return alert('Event, first name, last name, email, and session title are required.');
+    const id = document.getElementById('speakerId').value;
+    const record = {
+      id:id||uid('spk'), eventId:document.getElementById('speakerEventId').value, firstName:normalize(document.getElementById('speakerFirstName').value), lastName:normalize(document.getElementById('speakerLastName').value), email:normalize(document.getElementById('speakerEmail').value), title:normalize(document.getElementById('speakerTitle').value), organization:normalize(document.getElementById('speakerOrganization').value), speakerStatus:document.getElementById('speakerStatus').value, sessionTitle:normalize(document.getElementById('speakerSessionTitle').value), sessionDate:document.getElementById('speakerSessionDate').value, sessionTime:normalize(document.getElementById('speakerSessionTime').value), room:normalize(document.getElementById('speakerRoom').value), bioStatus:document.getElementById('speakerBioStatus').value, headshotStatus:document.getElementById('speakerHeadshotStatus').value, slidesStatus:document.getElementById('speakerSlidesStatus').value, avNeeds:normalize(document.getElementById('speakerAvNeeds').value), registrationStatus:document.getElementById('speakerRegistrationStatus').value, logisticsStatus:document.getElementById('speakerLogisticsStatus').value, owner:normalize(document.getElementById('speakerOwner').value), notes:normalize(document.getElementById('speakerNotes').value)
+    };
+    const idx = state.speakers.findIndex(s=>s.id===id); if (idx>=0) state.speakers[idx]=record; else state.speakers.push(record);
+    document.getElementById('speakerDialog').close(); saveState();
+  }
+
+  function deleteEvent(id) {
+    const event = eventById(id); const count = state.speakers.filter(s=>s.eventId===id).length;
+    if (!confirm(`Delete ${event?.name || 'this event'} and ${count} associated speaker record(s)?`)) return;
+    state.events = state.events.filter(e=>e.id!==id); state.speakers=state.speakers.filter(s=>s.eventId!==id); saveState();
+  }
+  function deleteSpeaker(id) { if (!confirm('Delete this speaker record?')) return; state.speakers=state.speakers.filter(s=>s.id!==id); saveState(); }
+
+  function downloadTemplate() {
+    if (!window.XLSX) return alert('Excel library did not load. Please refresh and try again.');
+    const sample = {};
+    headers.forEach(h => sample[h] = '');
+    sample['Event Name']='Example Event'; sample['Event Status']='Planning'; sample['First Name']='Jane'; sample['Last Name']='Smith'; sample['Email']='jane@example.org'; sample['Speaker Status']='Invited'; sample['Session Title']='Example Session'; sample['Bio Status']='Missing'; sample['Headshot Status']='Missing'; sample['Slides Status']='Missing'; sample['Registration Status']='Not started'; sample['Logistics Status']='Not sent';
+    const ws = XLSX.utils.json_to_sheet([sample], {header:headers});
+    ws['!cols'] = headers.map(h=>({wch:Math.max(14,Math.min(26,h.length+4))}));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Speakers');
+    XLSX.writeFile(wb,'League_Speaker_Management_Template.xlsx');
+  }
+
+  function exportData() {
+    if (!window.XLSX) return alert('Excel library did not load. Please refresh and try again.');
+    const rows = state.speakers.map(s => speakerToRow(s));
+    const ws = XLSX.utils.json_to_sheet(rows, {header:headers});
+    const eventRows = state.events.map(e=>({'Event Name':e.name,'Start Date':e.startDate,'End Date':e.endDate,'Location':e.location,'Status':e.status,'Owner':e.owner}));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Speakers'); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(eventRows),'Events');
+    XLSX.writeFile(wb,`League_Speaker_Data_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function speakerToRow(s) {
+    const e = eventById(s.eventId) || {};
+    return {'Event Name':e.name||'','Event Start Date':e.startDate||'','Event End Date':e.endDate||'','Event Location':e.location||'','Event Status':e.status||'','Event Owner':e.owner||'','First Name':s.firstName||'','Last Name':s.lastName||'','Email':s.email||'','Title':s.title||'','Organization':s.organization||'','Speaker Status':s.speakerStatus||'','Session Title':s.sessionTitle||'','Session Date':s.sessionDate||'','Session Time':s.sessionTime||'','Room':s.room||'','Bio Status':s.bioStatus||'','Headshot Status':s.headshotStatus||'','Slides Status':s.slidesStatus||'','AV Needs':s.avNeeds||'','Registration Status':s.registrationStatus||'','Logistics Status':s.logisticsStatus||'','Internal Owner':s.owner||'','Notes':s.notes||''};
+  }
+
+  async function importExcel(file) {
+    const result = document.getElementById('importResult');
+    if (!file) return;
+    if (!window.XLSX) { result.innerHTML='<div class="notice warning">Excel library did not load. Refresh the page and try again.</div>'; return; }
+    try {
+      const buf = await file.arrayBuffer(); const wb = XLSX.read(buf,{type:'array'}); const ws = wb.Sheets[wb.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      if (!rows.length) throw new Error('The first worksheet contains no data rows.');
+      const missingHeaders = ['Event Name','First Name','Last Name','Email','Session Title'].filter(h => !(h in rows[0]));
+      if (missingHeaders.length) throw new Error(`Missing required header(s): ${missingHeaders.join(', ')}`);
+      let added=0, updated=0, skipped=0, newEvents=0;
+      for (const row of rows) {
+        const eventName=normalize(row['Event Name']), email=normalize(row['Email']), sessionTitle=normalize(row['Session Title']);
+        if (!eventName || !email || !sessionTitle || !normalize(row['First Name']) || !normalize(row['Last Name'])) { skipped++; continue; }
+        let event = state.events.find(e=>lower(e.name)===lower(eventName));
+        if (!event) {
+          event = {id:uid('evt'),name:eventName,startDate:excelDate(row['Event Start Date']),endDate:excelDate(row['Event End Date']),location:normalize(row['Event Location']),status:normalize(row['Event Status'])||'Planning',owner:normalize(row['Event Owner'])};
+          state.events.push(event); newEvents++;
+        } else {
+          event.startDate = nonblank(excelDate(row['Event Start Date']),event.startDate); event.endDate=nonblank(excelDate(row['Event End Date']),event.endDate); event.location=nonblank(row['Event Location'],event.location); event.status=nonblank(row['Event Status'],event.status); event.owner=nonblank(row['Event Owner'],event.owner);
+        }
+        const existing = state.speakers.find(s=>s.eventId===event.id && lower(s.email)===lower(email) && lower(s.sessionTitle)===lower(sessionTitle));
+        const target = existing || {id:uid('spk'),eventId:event.id};
+        const map = {
+          firstName:'First Name',lastName:'Last Name',email:'Email',title:'Title',organization:'Organization',speakerStatus:'Speaker Status',sessionTitle:'Session Title',sessionTime:'Session Time',room:'Room',bioStatus:'Bio Status',headshotStatus:'Headshot Status',slidesStatus:'Slides Status',avNeeds:'AV Needs',registrationStatus:'Registration Status',logisticsStatus:'Logistics Status',owner:'Internal Owner',notes:'Notes'
+        };
+        Object.entries(map).forEach(([prop,col]) => { const val=normalize(row[col]); if (val || !existing) target[prop]=val || defaultsFor(prop); });
+        const sessionDate=excelDate(row['Session Date']); if (sessionDate || !existing) target.sessionDate=sessionDate;
+        if (existing) updated++; else { state.speakers.push(target); added++; }
+      }
+      saveState();
+      result.innerHTML=`<div class="notice"><strong>Import complete.</strong> ${added} speaker(s) added, ${updated} updated, ${newEvents} event(s) created, ${skipped} row(s) skipped.</div>`;
+    } catch (err) { result.innerHTML=`<div class="notice warning"><strong>Import failed.</strong> ${esc(err.message)}</div>`; }
+    finally { document.getElementById('excelUpload').value=''; }
+  }
+  function nonblank(v,current) { const n=normalize(v); return n ? n : (current||''); }
+  function defaultsFor(prop) { return ({speakerStatus:'Invited',bioStatus:'Missing',headshotStatus:'Missing',slidesStatus:'Missing',registrationStatus:'Not started',logisticsStatus:'Not sent'})[prop] || ''; }
+  function excelDate(v) {
+    if (!v) return '';
+    if (typeof v === 'number' && window.XLSX) { const d=XLSX.SSF.parse_date_code(v); return d ? `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}` : ''; }
+    const s=normalize(v); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d=new Date(s); return Number.isNaN(d.getTime()) ? s : d.toISOString().slice(0,10);
+  }
+
+  function renderRecipients() {
+    const eventId=document.getElementById('emailEventFilter')?.value || ''; const status=document.getElementById('emailStatusFilter')?.value || '';
+    const el=document.getElementById('recipientList'); if (!el) return;
+    if (!eventId) { el.innerHTML='<div class="empty">Choose an event to load speakers.</div>'; return; }
+    let speakers=state.speakers.filter(s=>s.eventId===eventId && s.email); if (status) speakers=speakers.filter(s=>s.speakerStatus===status);
+    el.innerHTML=speakers.length?speakers.map(s=>`<label class="recipient-row"><input class="recipientCheck" type="checkbox" value="${s.id}" checked><span><strong>${esc(s.firstName)} ${esc(s.lastName)}</strong><br><span class="muted">${esc(s.email)} · ${esc(s.sessionTitle)}</span></span></label>`).join(''):'<div class="empty">No speakers match this selection.</div>';
+  }
+
+  function applyTemplate(templateKey) {
+    const t=emailTemplates[templateKey]; document.getElementById('emailSubject').value=t.subject; document.getElementById('emailBody').value=t.body;
+  }
+  function selectedRecipients() { return [...document.querySelectorAll('.recipientCheck:checked')].map(c=>state.speakers.find(s=>s.id===c.value)).filter(Boolean); }
+  function merge(text,s) {
+    const e=eventById(s.eventId)||{}; const fields={first_name:s.firstName,last_name:s.lastName,event_name:e.name,session_title:s.sessionTitle,session_date:fmtDate(s.sessionDate),session_time:s.sessionTime,room:s.room};
+    return String(text||'').replace(/\{\{(\w+)\}\}/g,(_,k)=>fields[k]??'');
+  }
+  function previewEmail() {
+    const s=selectedRecipients()[0]; if (!s) return alert('Select at least one recipient.');
+    document.getElementById('emailPreview').textContent=`To: ${s.email}\nSubject: ${merge(document.getElementById('emailSubject').value,s)}\n\n${merge(document.getElementById('emailBody').value,s)}`;
+    document.getElementById('emailPreviewWrap').style.display='block';
+  }
+  function openEmailClient() {
+    const recipients=selectedRecipients(); if (!recipients.length) return alert('Select at least one recipient.');
+    if (recipients.length>1) {
+      const subject=document.getElementById('emailSubject').value; const body=document.getElementById('emailBody').value;
+      if (/\{\{/.test(subject+body)) return alert('For merged/personalized messages, open one speaker at a time or connect the direct email service.');
+      const bcc=recipients.map(s=>s.email).join(','); window.location.href=`mailto:?bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; return;
+    }
+    const s=recipients[0]; window.location.href=`mailto:${encodeURIComponent(s.email)}?subject=${encodeURIComponent(merge(document.getElementById('emailSubject').value,s))}&body=${encodeURIComponent(merge(document.getElementById('emailBody').value,s))}`;
+  }
+  async function sendConnected() {
+    if (!settings.emailEndpoint) return alert('Add a secure email API endpoint in Settings first.');
+    const recipients=selectedRecipients(); if (!recipients.length) return alert('Select at least one recipient.');
+    if (!confirm(`Send ${recipients.length} email(s) through the configured service?`)) return;
+    const payload={fromName:settings.fromName,fromEmail:settings.fromEmail,messages:recipients.map(s=>({to:s.email,subject:merge(document.getElementById('emailSubject').value,s),body:merge(document.getElementById('emailBody').value,s),speakerId:s.id,eventId:s.eventId}))};
+    try {
+      const r=await fetch(settings.emailEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); if (!r.ok) throw new Error(`Service returned ${r.status}`); alert(`Sent ${recipients.length} message(s).`);
+    } catch (e) { alert(`Email send failed: ${e.message}`); }
+  }
+
+  function renderSettings() {
+    document.getElementById('settingFromName').value=settings.fromName||''; document.getElementById('settingFromEmail').value=settings.fromEmail||''; document.getElementById('settingEmailEndpoint').value=settings.emailEndpoint||'';
+    const connected=Boolean(settings.emailEndpoint); document.getElementById('sendConnectedBtn').disabled=!connected;
+    document.getElementById('emailConnectionNote').textContent=connected?'A secure email endpoint is configured. Direct sending is available.':'Direct sending is not connected yet. The working MVP can open addressed messages in your default email client. Add a secure Microsoft 365 or email API endpoint in Settings to enable direct sends.';
+  }
+
+  document.getElementById('addEventBtn').addEventListener('click',()=>openEventDialog());
+  document.getElementById('saveEventBtn').addEventListener('click',saveEvent);
+  document.getElementById('addSpeakerBtn').addEventListener('click',()=>openSpeakerDialog());
+  document.getElementById('quickAddSpeaker').addEventListener('click',()=>openSpeakerDialog());
+  document.getElementById('saveSpeakerBtn').addEventListener('click',saveSpeaker);
+  document.getElementById('speakerEventFilter').addEventListener('change',renderSpeakers);
+  document.getElementById('speakerStatusFilter').addEventListener('change',renderSpeakers);
+  document.getElementById('speakerSearch').addEventListener('input',renderSpeakers);
+  document.getElementById('downloadTemplateBtn').addEventListener('click',downloadTemplate);
+  document.getElementById('exportDataBtn').addEventListener('click',exportData);
+  document.getElementById('excelUpload').addEventListener('change',e=>importExcel(e.target.files[0]));
+  document.getElementById('emailEventFilter').addEventListener('change',renderRecipients);
+  document.getElementById('emailStatusFilter').addEventListener('change',renderRecipients);
+  document.getElementById('emailTemplate').addEventListener('change',e=>applyTemplate(e.target.value));
+  document.getElementById('previewEmailBtn').addEventListener('click',previewEmail);
+  document.getElementById('openEmailClientBtn').addEventListener('click',openEmailClient);
+  document.getElementById('sendConnectedBtn').addEventListener('click',sendConnected);
+  document.getElementById('saveSettingsBtn').addEventListener('click',()=>{settings={fromName:normalize(document.getElementById('settingFromName').value),fromEmail:normalize(document.getElementById('settingFromEmail').value),emailEndpoint:normalize(document.getElementById('settingEmailEndpoint').value)};saveSettings();renderSettings();alert('Settings saved.');});
+  document.getElementById('clearDataBtn').addEventListener('click',()=>{if(confirm('Clear all local prototype events and speakers?')){state={events:[],speakers:[]};saveState();}});
+
+  window.SM={editEvent:id=>openEventDialog(eventById(id)),deleteEvent,editSpeaker:id=>openSpeakerDialog(state.speakers.find(s=>s.id===id)),deleteSpeaker};
+  applyTemplate('materials'); renderAll();
+})();
+</script>
+</body>
+</html>
