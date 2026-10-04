@@ -4,6 +4,7 @@ import * as state from '../functions/api/state.js';
 import * as record from '../functions/api/record.js';
 import * as batch from '../functions/api/batch.js';
 import * as email from '../functions/api/email.js';
+import * as programTemplate from '../functions/api/program-template.js';
 
 const routes = {
   '/api/health': health,
@@ -11,7 +12,8 @@ const routes = {
   '/api/state': state,
   '/api/record': record,
   '/api/batch': batch,
-  '/api/email': email
+  '/api/email': email,
+  '/api/program-template': programTemplate
 };
 
 const handlerForMethod = {
