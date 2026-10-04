@@ -34,8 +34,14 @@ export async function onRequestPost({ request, env }) {
     const qmap = await questionMap(env, form.id);
     const results = [];
     for (const original of messages) {
+      const meta = {
+        to: original.to || '',
+        speakerId: original.speakerId || '',
+        eventId: original.eventId || '',
+        messageType: original.messageType || 'custom'
+      };
       if (!original.to || !original.subject || !original.body) {
-        results.push({ ok: false, to: original.to || '', error: 'to, subject, and body are required' });
+        results.push({ ok: false, ...meta, error: 'to, subject, and body are required' });
         continue;
       }
       const message = { ...original, formId: form.id };
@@ -49,7 +55,7 @@ export async function onRequestPost({ request, env }) {
         redirect: 'manual'
       });
       const accepted = res.status >= 200 && res.status < 400;
-      results.push({ ok: accepted, to: message.to, status: res.status });
+      results.push({ ok: accepted, ...meta, status: res.status });
     }
     const failed = results.filter(r => !r.ok).length;
     return json({ ok: failed === 0, sent: results.length - failed, failed, results }, failed ? 207 : 200);
