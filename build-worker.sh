@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+for js in app.js lazy-tools.js archive-tools.js email-center.js program-flow.js; do
+  node --check "$js"
+done
+
 rm -rf public
 mkdir -p public
 cp app.html public/index.html
