@@ -7,6 +7,11 @@
     "JOTFORM_DATA_FORM_ID": "262756516354160",
     "JOTFORM_EMAIL_FORM_ID": "262755955143162"
   },
+  "kv_namespaces": [
+    {
+      "binding": "PROGRAM_TEMPLATES"
+    }
+  ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
