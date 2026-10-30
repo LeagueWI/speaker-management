@@ -38,7 +38,9 @@
     try{
       await script('https://unpkg.com/pizzip@3.2.0/dist/pizzip.js');
       await script('https://unpkg.com/docxtemplater@3.71.0/build/docxtemplater.js');
+      await script('/program-flow-model.js');
       await script('/structured-word.js');
+      await script('/program-flow-editor.js');
       await script('/program-flow.js');
     }catch(e){
       console.error(e);
