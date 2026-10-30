@@ -16,6 +16,7 @@ let selectedEvent='';
 const lookup=id=>data.events.find(x=>x.id===id);
 const block=id=>data.programBlocks.find(x=>x.id===id);
 const layouts=id=>Array.isArray(lookup(id)?.programLayouts)?lookup(id).programLayouts:[];
+const current=e=>!(window.SMArchive?.isArchived?.(e)??(e.status==='Archived'));
 const byDate=(a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.order)||0)-(Number(b.order)||0)||(a.time||'').localeCompare(b.time||'')||(a.title||'').localeCompare(b.title||'');
 async function api(path,options={}){
  const r=await fetch(path,{...options,headers:{'content-type':'application/json',...(options.headers||{})}});
@@ -140,8 +141,8 @@ function refresh(next){
  if(next)data=next;
  ensureUI();
  const el=$('psEvent'),old=selectedEvent||el.value;
- el.innerHTML=option('','Choose an event','')+data.events.map(e=>option(e.id,e.name,old)).join('');
- selectedEvent=data.events.some(e=>e.id===old)?old:'';
+ el.innerHTML=option('','Choose an event','')+data.events.filter(current).map(e=>option(e.id,e.name,old)).join('');
+ selectedEvent=data.events.some(e=>e.id===old&&current(e))?old:'';
  el.value=selectedEvent;
  renderBlocks();
 }
@@ -212,9 +213,8 @@ async function removeBlock(id){
  }catch(e){alert('Could not remove block: '+e.message);}
 }
 async function reload(){
- const r=await api('/api/state');
- refresh(r.state||{events:[],sessions:[],programBlocks:[]});
- $('settingsRefreshBtn')?.click();
+ if(window.LeagueRefreshSharedState)await window.LeagueRefreshSharedState();
+ else {const r=await api('/api/state');refresh(r.state||{events:[],sessions:[],programBlocks:[]});}
 }
 window.ProgramStructure={refresh,openEvent,getLayouts,validateLayouts,openSession,sessionAssignment,validateSession};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>refresh(window.LeagueSharedState?.()));else refresh(window.LeagueSharedState?.());
