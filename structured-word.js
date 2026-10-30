@@ -40,9 +40,10 @@ function sessionParagraphs(s,x){
  if(x.notes)parts.push(para(x.notes,{size:15,color:'526574'}));
  return parts;
 }
+function clock(v){const t=String(v||'').split(/[–-]/)[0].trim(),m=t.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);if(!m)return 9999;let h=Number(m[1]),min=Number(m[2]||0);if(m[3])h=h%12+(m[3].toLowerCase()==='pm'?12:0);else if(h>=1&&h<=6)h+=12;return h*60+min;}
 function sortRows(a,b){
  return (a.date||'').localeCompare(b.date||'')||
- (a.time||'').localeCompare(b.time||'')||
+ clock(a.time)-clock(b.time)||
  (Number(a.order)||0)-(Number(b.order)||0)||
  (a.title||'').localeCompare(b.title||'');
 }
