@@ -40,7 +40,7 @@ function openEvent(e){
 function getLayouts(){return draft.map(l=>({id:l.id,name:clean(l.name),columns:l.columns.map(c=>({id:c.id,name:clean(c.name),room:clean(c.room)}))}));}
 function validateLayouts(next,old,state){
  const list=next.programLayouts||[];
- if(list.some(l=>!l.name||l.columns.length<1||l.columns.some(c=>!c.name)))return 'Every program layout and column needs a name.';
+ if(list.some(l=>!l.name||l.columns.length<1||l.columns.length>12||l.columns.some(c=>!c.name)))return 'Every program layout and column needs a name. A layout can have up to 12 columns.';
  const ids=new Set(list.map(x=>x.id));
  const oldIds=new Set((old?.programLayouts||[]).map(x=>x.id));
  const blocks=(state.programBlocks||[]).filter(b=>b.eventId===next.id);
