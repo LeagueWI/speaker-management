@@ -77,16 +77,16 @@ function makeTable(s,id){
    continue;
   }
   if(columns.length>1){
-   if(columns.length>3)throw Error('Structured Word output currently supports up to three columns per layout. Reduce the layout or use the standard template.');
+   if(columns.length>12)throw Error('Structured Word output supports up to twelve columns per layout.');
    tableRows.push(row([cell([para(b.title||layout.name||'Concurrent sessions',{bold:true,size:19,center:true,color:'B3261E'})],13,'D4D4D4',true)]));
-   const span=12/columns.length,cells=[cell([para(b.time||'',{size:17})],1,'FFFFFF')];
-   for(const col of columns){
+   const spans=columns.map((_,i)=>Math.floor(12/columns.length)+(i<12%columns.length?1:0)),cells=[cell([para(b.time||'',{size:17})],1,'FFFFFF')];
+   for(const [index,col] of columns.entries()){
     const group=assigned.filter(x=>x.columnId===col.id);
     const parts=[para(col.name||'Track',{bold:true,size:18,center:true})];
     if(col.room)parts.push(para('Room: '+col.room,{size:15,center:true,color:'526574'}));
     if(!group.length)parts.push(para('No session assigned',{italic:true,size:16,color:'66788A'}));
     for(const ses of group)parts.push(...sessionParagraphs(s,ses));
-    cells.push(cell(parts,span,'FFFFFF'));
+    cells.push(cell(parts,spans[index],'FFFFFF'));
    }
    const leftovers=assigned.filter(x=>!columns.some(c=>c.id===x.columnId));
    tableRows.push(row(cells));
