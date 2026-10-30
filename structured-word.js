@@ -20,21 +20,23 @@ function para(t,{bold=false,size=18,color='222222',center=false,italic=false,spa
  const rpr='<w:rPr>'+(bold?'<w:b/>':'')+(italic?'<w:i/>':'')+'<w:color w:val="'+color+'"/><w:sz w:val="'+size+'"/></w:rPr>';
  return '<w:p>'+ppr+'<w:r>'+rpr+'<w:t xml:space="preserve">'+X(t)+'</w:t></w:r></w:p>';
 }
-function cell(parts,span=1,shading='FFFFFF',vCenter=false){
- const width=span===13?13760:span===12?11760:span*980;
+function cell(parts,span=1,shading='FFFFFF',vCenter=false,customWidth=0){
+ const width=customWidth||(span===14?13800:span===13?11950:span===12?10200:span*850);
  return '<w:tc><w:tcPr><w:tcW w:w="'+width+'" w:type="dxa"/>'+
  (span>1?'<w:gridSpan w:val="'+span+'"/>':'')+
  '<w:shd w:fill="'+shading+'"/><w:vAlign w:val="'+(vCenter?'center':'top')+'"/></w:tcPr>'+
  (parts&&parts.length?parts.join(''):para(''))+'</w:tc>';
 }
+const timeCell=parts=>cell(parts,1,'FFFFFF',true,1750);
+const notesCell=parts=>cell(parts,1,'FFFFFF',true,1850);
 const row=cells=>'<w:tr><w:trPr><w:cantSplit/></w:trPr>'+cells.join('')+'</w:tr>';
 function speakersOf(s,session){
  return (s.speakers||[]).filter(p=>p.sessionId===session.id&&p.speakerStatus!=='Declined')
    .map(p=>[[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ').trim(),p.title,p.organization].filter(Boolean).join(', ')).filter(Boolean);
 }
-function sessionParagraphs(s,x){
+function sessionParagraphs(s,x,showRoom=true){
  const parts=[para(x.title||'Untitled session',{bold:true,size:19})];
- if(x.room)parts.push(para('Room: '+x.room,{size:16,color:'526574'}));
+ if(showRoom&&x.room)parts.push(para('Room: '+x.room,{size:16,color:'526574'}));
  const speakers=speakersOf(s,x);
  if(speakers.length){parts.push(para('Speakers:',{bold:true,size:16}));speakers.forEach(p=>parts.push(para(p,{size:16})));}
  if(x.notes)parts.push(para(x.notes,{size:15,color:'526574'}));
@@ -63,7 +65,7 @@ function makeTable(s,id){
  for(const b of items){
   if(b.date!==lastDay){
    lastDay=b.date;
-   tableRows.push(row([cell([para(DAY(b.date),{bold:true,size:22,center:true})],13,'D4D4D4',true)]));
+   tableRows.push(row([cell([para(DAY(b.date),{bold:true,size:22,center:true})],13,'D4D4D4',true),cell([para('ROOM / NOTES',{bold:true,size:15,center:true})],1,'D4D4D4',true,1850)]));
   }
   const assigned=b.singleSession?[b.singleSession]:ss.filter(x=>x.blockId===b.id);
   const layout=layouts.find(l=>l.id===b.layoutId);
@@ -71,15 +73,16 @@ function makeTable(s,id){
   if(b.kind==='activity'){
    const isBreak=/\bbreak\b|\btransition\b/i.test(b.title||'');
    tableRows.push(row([
-    cell([para(b.time||'',{size:17})],1,'FFFFFF',true),
-    cell([para(b.title||'Activity',{bold:true,size:18,color:isBreak?'B3261E':'222222'}),...(b.notes?[para(b.notes,{size:16})]:[])],12,isBreak?'FFFFFF':'F1F1F1',true)
+    timeCell([para(b.time||'',{size:17})]),
+    cell([para(b.title||'Activity',{bold:true,size:18,color:isBreak?'B3261E':'222222'})],12,isBreak?'FFFFFF':'F1F1F1',true),
+    notesCell(b.notes?[para(b.notes,{size:15})]:[])
    ]));
    continue;
   }
   if(columns.length>1){
    if(columns.length>12)throw Error('Structured Word output supports up to twelve columns per layout.');
-   tableRows.push(row([cell([para(b.title||layout.name||'Concurrent sessions',{bold:true,size:19,center:true,color:'B3261E'})],13,'D4D4D4',true)]));
-   const spans=columns.map((_,i)=>Math.floor(12/columns.length)+(i<12%columns.length?1:0)),cells=[cell([para(b.time||'',{size:17})],1,'FFFFFF')];
+   tableRows.push(row([cell([para(b.title||layout.name||'Concurrent sessions',{bold:true,size:19,center:true,color:'B3261E'})],14,'D4D4D4',true)]));
+   const spans=columns.map((_,i)=>Math.floor(12/columns.length)+(i<12%columns.length?1:0)),cells=[timeCell([para(b.time||'',{size:17})])];
    for(const [index,col] of columns.entries()){
     const group=assigned.filter(x=>x.columnId===col.id);
     const parts=[para(col.name||'Track',{bold:true,size:18,center:true})];
@@ -89,24 +92,26 @@ function makeTable(s,id){
     cells.push(cell(parts,spans[index],'FFFFFF'));
    }
    const leftovers=assigned.filter(x=>!columns.some(c=>c.id===x.columnId));
+   cells.push(notesCell(b.notes?[para(b.notes,{size:15})]:[]));
    tableRows.push(row(cells));
-   for(const ses of leftovers)tableRows.push(row([cell([para(b.time||'',{size:16})],1),cell([para('Unassigned track',{bold:true,color:'B3261E'}),...sessionParagraphs(s,ses)],12)]));
+   for(const ses of leftovers)tableRows.push(row([timeCell([para(b.time||'',{size:16})]),cell([para('Unassigned track',{bold:true,color:'B3261E'}),...sessionParagraphs(s,ses)],12),notesCell([])]));
   }else{
    if(assigned.length){
     for(let i=0;i<assigned.length;i++){
      const x=assigned[i];
-     tableRows.push(row([cell([para(b.time||x.time||'',{size:17})],1,'FFFFFF',true),
-       cell(sessionParagraphs(s,x),12,i===0?'EDEDED':'FFFFFF')]));
+     tableRows.push(row([timeCell([para(b.time||x.time||'',{size:17})]),
+       cell(sessionParagraphs(s,x,false),12,i===0?'EDEDED':'FFFFFF'),
+       notesCell([...(x.room?[para(x.room,{size:16})]:[]),...(b.notes?[para(b.notes,{size:15})]:[])])]));
     }
    }else{
-    tableRows.push(row([cell([para(b.time||'',{size:17})],1),cell([para(b.title||'Session TBD',{bold:true,size:18}),...(b.notes?[para(b.notes,{size:16})]:[])],12,'EDEDED')]));
+    tableRows.push(row([timeCell([para(b.time||'',{size:17})]),cell([para(b.title||'Session TBD',{bold:true,size:18})],12,'EDEDED'),notesCell(b.notes?[para(b.notes,{size:15})]:[])]));
    }
   }
  }
- if(!tableRows.length)tableRows.push(row([cell([para('No scheduled program blocks or sessions have been added.',{italic:true})],13)]));
- const grid='<w:tblGrid><w:gridCol w:w="2000"/>'+Array(12).fill('<w:gridCol w:w="980"/>').join('')+'</w:tblGrid>';
+ if(!tableRows.length)tableRows.push(row([cell([para('No scheduled program blocks or sessions have been added.',{italic:true})],14)]));
+ const grid='<w:tblGrid><w:gridCol w:w="1750"/>'+Array(12).fill('<w:gridCol w:w="850"/>').join('')+'<w:gridCol w:w="1850"/></w:tblGrid>';
  const border='<w:top w:val="single" w:sz="5" w:color="666666"/><w:left w:val="single" w:sz="5" w:color="666666"/><w:bottom w:val="single" w:sz="5" w:color="666666"/><w:right w:val="single" w:sz="5" w:color="666666"/><w:insideH w:val="single" w:sz="5" w:color="666666"/><w:insideV w:val="single" w:sz="5" w:color="666666"/>';
- return '<w:tbl><w:tblPr><w:tblW w:w="13760" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+border+'</w:tblBorders><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr>'+grid+tableRows.join('')+'</w:tbl>';
+ return '<w:tbl><w:tblPr><w:tblW w:w="13800" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+border+'</w:tblBorders><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr>'+grid+tableRows.join('')+'</w:tbl>';
 }
 function documentXML(s,id){
  const e=s.events.find(x=>x.id===id);
