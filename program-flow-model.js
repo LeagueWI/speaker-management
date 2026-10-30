@@ -5,15 +5,32 @@
 (()=>{
 'use strict';
 const norm=s=>String(s??'').trim();
-const timeKey=s=>norm(s).toLowerCase().replace(/[–—−-]/g,'-').replace(/\s+/g,'').replace(/\./g,'');
-function minutes(s){
- const first=norm(s).split(/[–—−-]/)[0].trim();
- const m=first.match(/^(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/i);
- if(!m)return 1500;
- let h=+m[1],min=+(m[2]||0);
- if(m[3])h=h%12+(/^p/i.test(m[3])?12:0);
+function parseClock(raw,inherit=''){
+ const m=norm(raw).match(/^(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?/i);
+ if(!m)return null;
+ let h=Number(m[1]),min=Number(m[2]||0);
+ const suffix=(m[3]||inherit).replace(/\./g,'').toLowerCase();
+ if(suffix)h=h%12+(suffix.startsWith('p')?12:0);
  else if(h>=1&&h<=6)h+=12;
  return h*60+min;
+}
+function timeKey(value){
+ const parts=norm(value).split(/[–—−-]/).map(p=>p.trim()).filter(Boolean);
+ if(!parts.length)return '';
+ const endPart=parts[parts.length-1];
+ const suffix=(endPart.match(/(a\.?m\.?|p\.?m\.?)\s*$/i)||[])[1]||'';
+ const end=parseClock(endPart);
+ let start=parseClock(parts[0],suffix);
+ if(start===null)return norm(value).toLowerCase().replace(/\s+/g,'').replace(/\./g,'');
+ if(parts.length>1&&end!==null){
+  if(start>end&&suffix.toLowerCase().startsWith('p')&&start-end>60)start-=720;
+  return String(start)+'-'+String(end);
+ }
+ return String(start);
+}
+function minutes(value){
+ const start=timeKey(value).split('-')[0];
+ const n=Number(start);return start!==''&&Number.isFinite(n)?n:1500;
 }
 function compare(a,b){return norm(a.date).localeCompare(norm(b.date))||minutes(a.time)-minutes(b.time)||norm(a.time).localeCompare(norm(b.time))||norm(a.title).localeCompare(norm(b.title));}
 function slotKey(s){return norm(s.date)+'|'+timeKey(s.time);}
@@ -22,7 +39,7 @@ function stableId(s){
  return 'auto_'+hash.toString(36);
 }
 function makeRow(s){return{id:stableId(s),kind:'sessions',date:norm(s.date),time:norm(s.time),heading:'',notes:'',labels:{},sessionIds:[]};}
-function build(sessions,eventId){
+function build(sessions,eventId,legacyBlocks=[]){
  const list=(sessions||[]).filter(s=>s.eventId===eventId).sort(compare);
  const groups=new Map();
  for(const s of list){
@@ -30,7 +47,18 @@ function build(sessions,eventId){
   if(!groups.has(key))groups.set(key,makeRow(s));
   groups.get(key).sessionIds.push(s.id);
  }
- return [...groups.values()];
+ const result=[...groups.values()];
+ for(const b of legacyBlocks||[]){
+  if(b.eventId!==eventId)continue;
+  if(b.kind==='activity'){
+   result.push({id:'legacy_activity_'+b.id,kind:'activity',date:norm(b.date),time:norm(b.time),title:norm(b.title),notes:norm(b.notes),sessionIds:[],labels:{}});
+  }else{
+   const r=result.find(x=>x.kind==='sessions'&&x.date===b.date&&timeKey(x.time)===timeKey(b.time));
+   if(r&&r.sessionIds.length>1&&!r.heading)r.heading=norm(b.title);
+   else if(!r&&norm(b.title))result.push({id:'legacy_item_'+b.id,kind:'activity',date:norm(b.date),time:norm(b.time),title:norm(b.title),notes:norm(b.notes),sessionIds:[],labels:{}});
+  }
+ }
+ return result.sort(compare);
 }
 function cleanRow(row){
  const kind=['sessions','activity','heading'].includes(row?.kind)?row.kind:'sessions';
@@ -39,9 +67,9 @@ function cleanRow(row){
    labels:row?.labels&&typeof row.labels==='object'&&!Array.isArray(row.labels)?{...row.labels}:{},
    sessionIds:Array.isArray(row?.sessionIds)?row.sessionIds.map(norm).filter(Boolean):[]};
 }
-function reconcile(saved,sessions,eventId){
+function reconcile(saved,sessions,eventId,legacyBlocks=[]){
  const list=(sessions||[]).filter(s=>s.eventId===eventId).sort(compare);
- if(!saved?.length)return build(list,eventId);
+ if(!saved?.length)return build(list,eventId,legacyBlocks);
  const known=new Map(list.map(s=>[s.id,s])),used=new Set(),rows=[];
  for(const raw of saved){
   const row=cleanRow(raw);
@@ -49,9 +77,11 @@ function reconcile(saved,sessions,eventId){
   if(row.kind==='sessions'){
    row.sessionIds=row.sessionIds.filter(id=>{
      if(!known.has(id)||used.has(id))return false;
+     const current=known.get(id);
+     if(current.date!==row.date||timeKey(current.time)!==timeKey(row.time))return false;
      used.add(id);return true;
    });
-   if(!row.sessionIds.length&&row.id.startsWith('auto_'))continue;
+   if(!row.sessionIds.length)continue;
   }else row.sessionIds=[];
   rows.push(row);
  }
