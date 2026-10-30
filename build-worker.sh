@@ -5,7 +5,7 @@ for js in app.js lazy-tools.js archive-tools.js email-center.js program-flow.js 
   node --check "$js"
 done
 
-node --test tests/structured-word.test.cjs
+node --test tests/structured-word.test.cjs tests/program-flow-editor.test.cjs
 
 rm -rf public
 mkdir -p public
