@@ -1,3 +1,9 @@
+## Program Structure (new)
+
+Conference programs can now define named track/roundtable layouts at the Event level and group Sessions in scheduled Program Blocks. Use **Events → Program Structure** and choose **Structured conference program** under Program Flow to generate an editable multi-column Word agenda. Existing uploaded Word templates continue to work in standard mode.
+
+See [PROGRAM_STRUCTURE_GUIDE.md](PROGRAM_STRUCTURE_GUIDE.md) for setup, data model, compatibility, and test steps.
+
 # League Speaker Management
 
 A protected, multi-event speaker-management application for the League of Wisconsin Municipalities.
