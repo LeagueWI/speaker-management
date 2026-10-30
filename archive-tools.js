@@ -7,7 +7,7 @@
   let applyQueued=false;
 
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt',"'":'&#039;','"':'&quot;'}[c]));
-  const normState=s=>({events:s?.events||[],sessions:s?.sessions||[],speakers:s?.speakers||[],communications:s?.communications||[]});
+  const normState=s=>({events:s?.events||[],sessions:s?.sessions||[],speakers:s?.speakers||[],programBlocks:s?.programBlocks||[],communications:s?.communications||[]});
   const parseDate=v=>{if(!v)return null;const d=new Date(`${v}T12:00:00`);return Number.isNaN(d.getTime())?null:d};
   const fmtDate=v=>{const d=parseDate(v);return d?d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):''};
   const fmtDateTime=v=>{if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString()};
@@ -206,12 +206,13 @@
 
   async function deleteArchivedEvent(id){
     const e=eventById(id);if(!e)return;
-    const speakers=fullState.speakers.filter(s=>s.eventId===id),sessions=fullState.sessions.filter(s=>s.eventId===id),comms=fullState.communications.filter(c=>c.eventId===id);
+    const speakers=fullState.speakers.filter(s=>s.eventId===id),sessions=fullState.sessions.filter(s=>s.eventId===id),blocks=(fullState.programBlocks||[]).filter(b=>b.eventId===id),comms=fullState.communications.filter(c=>c.eventId===id);
     if(!confirm(`Permanently delete “${e.name}”, ${sessions.length} session(s), ${speakers.length} speaker record(s), and ${comms.length} communication record(s)? This cannot be undone from the dashboard.`))return;
     try{
       for(const c of comms)await recordApi(`/api/record?type=communication&id=${encodeURIComponent(c.id)}`,{method:'DELETE'});
       for(const s of speakers)await recordApi(`/api/record?type=speaker&id=${encodeURIComponent(s.id)}`,{method:'DELETE'});
       for(const s of sessions)await recordApi(`/api/record?type=session&id=${encodeURIComponent(s.id)}`,{method:'DELETE'});
+      for(const b of blocks)await recordApi(`/api/record?type=program-block&id=${encodeURIComponent(b.id)}`,{method:'DELETE'});
       try{await nativeFetch(`/api/program-template?eventId=${encodeURIComponent(id)}`,{method:'DELETE'})}catch{}
       await recordApi(`/api/record?type=event&id=${encodeURIComponent(id)}`,{method:'DELETE'});
       selectedArchiveId='';
