@@ -37,9 +37,17 @@
     if(loaded.has('/program-flow.js'))return;
     try{
       await script('https://unpkg.com/pizzip@3.2.0/dist/pizzip.js');
-      await script('https://unpkg.com/docxtemplater@3.71.0/build/docxtemplater.js');
+      await script('/program-flow-model.js');
       await script('/structured-word.js');
-      await script('/program-flow.js');
+      await script('/program-flow-editor.js');
+      // The classic templating library is optional. Its availability must not
+      // prevent the visual program editor from loading.
+      try {
+        await script('https://unpkg.com/docxtemplater@3.71.0/build/docxtemplater.js');
+        await script('/program-flow.js');
+      } catch (legacyError) {
+        console.warn('Classic Word template tools are unavailable.', legacyError);
+      }
     }catch(e){
       console.error(e);
       alert('Program Flow tools could not load. Refresh the page and try again.');

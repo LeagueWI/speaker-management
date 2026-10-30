@@ -1,3 +1,5 @@
+> **Legacy workflow, superseded.** The visual Program Flow Editor replaces the Program Blocks and track-setup UI. Existing data is retained. Use [PROGRAM_FLOW_EDITOR_GUIDE.md](PROGRAM_FLOW_EDITOR_GUIDE.md) for the current workflow.
+
 # Program Structure and Structured Word Programs
 
 This enhancement adds configurable program layouts, scheduled program blocks, and editable multi-column Word agendas without replacing the existing Event → Session → Speaker model.

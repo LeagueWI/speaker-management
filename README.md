@@ -1,3 +1,9 @@
+## Program Flow Editor
+
+Use **Events → Program Flow Editor** to automatically group existing sessions by date/time, rearrange concurrent sessions, add section headings and agenda-only items, save a per-event layout, and export a Word program. This workflow does not require Program Blocks or Event program layouts. Existing configured blocks and layouts remain stored but the setup UI is hidden. Your old Word templates remain available under **Use an existing Word template (optional)**.
+
+See [PROGRAM_FLOW_EDITOR_GUIDE.md](PROGRAM_FLOW_EDITOR_GUIDE.md) for the current workflow.
+
 ## Program Structure (new)
 
 Conference programs can now define named track/roundtable layouts at the Event level and group Sessions in scheduled Program Blocks. Use **Events → Program Structure** and choose **Structured conference program** under Program Flow to generate an editable multi-column Word agenda. Existing uploaded Word templates continue to work in standard mode.

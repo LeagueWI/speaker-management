@@ -59,6 +59,57 @@ function rowsFor(s,id){
    .map(x=>({id:'legacy_'+x.id,eventId:id,date:x.date||'',time:x.time||'',title:x.title||'',order:0,kind:'sessions',layoutId:'',singleSession:x}));
  return {event:e,rows:blocks.concat(other).sort(sortRows)};
 }
+
+/* The visual editor supplies its final row order. It never changes session records. */
+function visualTable(s,id){
+ const sessions=new Map((s.sessions||[]).filter(x=>x.eventId===id).map(x=>[x.id,x]));
+ const rows=s.programFlowRows||[],result=[];let lastDay=null;
+ for(const entry of rows){
+  const date=entry.date||'';
+  if(lastDay!==date){
+   lastDay=date;
+   result.push(row([cell([para(DAY(date),{bold:true,size:22,center:true})],13,'D4D4D4',true),cell([para('ROOM / NOTES',{bold:true,size:15,center:true})],1,'D4D4D4',true,1850)]));
+  }
+  if(entry.kind==='heading'){
+   result.push(row([cell([para(entry.title||'Section heading',{bold:true,size:19,center:true})],14,'D4D4D4',true)]));
+   continue;
+  }
+  if(entry.kind==='activity'){
+   const isBreak=/\bbreak\b|\btransition\b/i.test(entry.title||'');
+   result.push(row([timeCell([para(entry.time||'',{size:17})]),cell([para(entry.title||'Activity',{bold:true,size:19,color:isBreak?'B3261E':'222222'})],12,isBreak?'FFFFFF':'F1F1F1',true),notesCell(entry.notes?[para(entry.notes,{size:15})]:[])]));
+   continue;
+  }
+  const ids=(entry.sessionIds||[]).filter(x=>sessions.has(x));
+  if(entry.heading)result.push(row([cell([para(entry.heading,{bold:true,size:19,center:true,color:'B3261E'})],14,'D4D4D4',true)]));
+  if(!ids.length){
+   result.push(row([timeCell([para(entry.time||'',{size:17})]),cell([para('Session not yet assigned',{size:17,italic:true})],12),notesCell([])]));continue;
+  }
+  for(let start=0;start<ids.length;start+=12){
+   const batch=ids.slice(start,start+12);
+   if(batch.length===1){
+    const x=sessions.get(batch[0]);
+    result.push(row([timeCell([para(entry.time||x.time||'',{size:17})]),cell(sessionParagraphs(s,x,false),12,'EDEDED'),notesCell([...(roomFor(s,x)?[para(roomFor(s,x),{size:16})]:[]),...(entry.notes?[para(entry.notes,{size:15})]:[])])]));
+   }else{
+    const spans=batch.map((_,i)=>Math.floor(12/batch.length)+(i<12%batch.length?1:0));
+    const cells=[timeCell([para(entry.time||'',{size:17})])];
+    batch.forEach((sid,i)=>{
+     const x=sessions.get(sid),parts=[];
+     const label=entry.labels?.[sid];
+     if(label)parts.push(para(label,{bold:true,size:18,center:true}));
+     parts.push(...sessionParagraphs(s,x,true));
+     cells.push(cell(parts,spans[i],'FFFFFF'));
+    });
+    cells.push(notesCell(entry.notes?[para(entry.notes,{size:15})]:[]));
+    result.push(row(cells));
+   }
+  }
+ }
+ if(!result.length)result.push(row([cell([para('No program items have been added.',{italic:true})],14)]));
+ const grid='<w:tblGrid><w:gridCol w:w="1750"/>'+Array(12).fill('<w:gridCol w:w="850"/>').join('')+'<w:gridCol w:w="1850"/></w:tblGrid>';
+ const border='<w:top w:val="single" w:sz="5" w:color="666666"/><w:left w:val="single" w:sz="5" w:color="666666"/><w:bottom w:val="single" w:sz="5" w:color="666666"/><w:right w:val="single" w:sz="5" w:color="666666"/><w:insideH w:val="single" w:sz="5" w:color="666666"/><w:insideV w:val="single" w:sz="5" w:color="666666"/>';
+ return '<w:tbl><w:tblPr><w:tblW w:w="13800" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders>'+border+'</w:tblBorders><w:tblCellMar><w:top w:w="90" w:type="dxa"/><w:bottom w:w="90" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr>'+grid+result.join('')+'</w:tbl>';
+}
+
 function makeTable(s,id){
  const {event,rows:items}=rowsFor(s,id),layouts=event.programLayouts||[];
  const ss=(s.sessions||[]).filter(x=>x.eventId===id);
@@ -124,7 +175,7 @@ function documentXML(s,id){
  const sect='<w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/><w:pgMar w:top="840" w:right="900" w:bottom="840" w:left="900" w:header="400" w:footer="400" w:gutter="0"/></w:sectPr>';
  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
  '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+
- title+location+datesLine+heading+makeTable(s,id)+sect+'</w:body></w:document>';
+ title+location+datesLine+heading+(Array.isArray(s.programFlowRows)?visualTable(s,id):makeTable(s,id))+sect+'</w:body></w:document>';
 }
 async function generate(s,id){
  if(!window.PizZip)throw Error('Word generation library has not loaded.');

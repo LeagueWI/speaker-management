@@ -9,3 +9,36 @@
 .ps-column{display:grid;grid-template-columns:minmax(130px,1fr) minmax(140px,1fr) auto;gap:8px;align-items:center}
 #programStructurePanel .field{max-width:480px}
 @media(max-width:760px){.ps-column{grid-template-columns:1fr}.ps-layout .toolbar input{max-width:none}}
+
+/* Visual Program Flow Editor. The previous block/track configuration is hidden. */
+#programFlowEditorPanel{border:1px solid #cbd5df}
+.pfe-preview{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:12px 0 18px;background:#fff}
+.pfe-day{padding:11px 15px;background:#dce4eb;color:var(--navy);font-weight:750;text-align:center;border-bottom:1px solid #bdcad5}
+.pfe-heading{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:#e9eef3;border-bottom:1px solid var(--line)}
+.pfe-row{display:grid;grid-template-columns:135px minmax(0,1fr);border-bottom:1px solid var(--line)}
+.pfe-row:last-child{border-bottom:0}
+.pfe-time{padding:13px 10px;border-right:1px solid var(--line);font-size:.83rem;white-space:normal;font-weight:650}
+.pfe-session-area{padding:10px;min-width:0}
+.pfe-row-header{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:8px}
+.pfe-row-header input{flex:1;min-width:120px;max-width:500px;font-size:.82rem;padding:6px 8px}
+.pfe-tools{display:inline-flex;gap:5px;align-items:center;justify-content:flex-end}
+.pfe-concurrent{display:grid;grid-template-columns:repeat(var(--pfe-columns,1),minmax(170px,1fr));gap:9px;overflow-x:auto;padding-bottom:2px}
+.pfe-card{display:flex;flex-direction:column;gap:7px;border:1px solid #cbd5df;border-radius:7px;padding:12px;min-width:0;background:#fbfdff}
+.pfe-card strong{font-size:.87rem;line-height:1.35}
+.pfe-card small{font-size:.78rem;line-height:1.35;color:var(--muted)}
+.pfe-card small.pfe-warning{color:#9a6700}
+.pfe-card select{font-size:.76rem;padding:6px 8px;margin-top:auto;min-width:135px}
+.pfe-card-head{display:flex;gap:4px;align-items:center}
+.pfe-card-head input{min-width:100px;flex:1;font-size:.76rem;padding:6px 7px}
+.pfe-card-head .btn{padding:5px 7px}
+.pfe-activity{padding:11px;display:flex;flex-direction:column;gap:3px;background:#f8fafc}
+.pfe-activity small{color:var(--muted)}
+.pfe-activity+.pfe-tools{padding:8px;align-self:center}
+.pfe-muted,.pfe-save-state{font-size:.78rem;color:var(--muted)}
+.pfe-save-state{margin-bottom:4px}
+.pfe-empty{padding:14px;color:var(--muted);font-size:.8rem;border:1px dashed var(--line);border-radius:6px}
+#pfeMessage{margin-top:14px}
+.pf-classic{margin:6px 0 17px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.pf-classic summary{cursor:pointer;font-size:.83rem;font-weight:600;color:var(--muted);padding:10px 15px}
+.pf-classic #programFlowPanel{margin:0;border:0;box-shadow:none;border-radius:0}
+@media(max-width:760px){.pfe-row{grid-template-columns:98px minmax(0,1fr)}.pfe-concurrent{grid-template-columns:repeat(var(--pfe-columns,1),minmax(170px,1fr))}.pfe-time{padding:9px 6px;font-size:.77rem}}

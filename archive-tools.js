@@ -7,7 +7,7 @@
   let applyQueued=false;
 
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt',"'":'&#039;','"':'&quot;'}[c]));
-  const normState=s=>({events:s?.events||[],sessions:s?.sessions||[],speakers:s?.speakers||[],programBlocks:s?.programBlocks||[],communications:s?.communications||[]});
+  const normState=s=>({events:s?.events||[],sessions:s?.sessions||[],speakers:s?.speakers||[],programBlocks:s?.programBlocks||[],programFlows:s?.programFlows||[],communications:s?.communications||[]});
   const parseDate=v=>{if(!v)return null;const d=new Date(`${v}T12:00:00`);return Number.isNaN(d.getTime())?null:d};
   const fmtDate=v=>{const d=parseDate(v);return d?d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):''};
   const fmtDateTime=v=>{if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?v:d.toLocaleString()};
@@ -214,6 +214,7 @@
       for(const s of speakers)await recordApi(`/api/record?type=speaker&id=${encodeURIComponent(s.id)}`,{method:'DELETE'});
       for(const s of sessions)await recordApi(`/api/record?type=session&id=${encodeURIComponent(s.id)}`,{method:'DELETE'});
       for(const b of blocks)await recordApi(`/api/record?type=program-block&id=${encodeURIComponent(b.id)}`,{method:'DELETE'});
+      if((fullState.programFlows||[]).some(f=>f.eventId===id||f.id===id))await recordApi(`/api/record?type=program-flow&id=${encodeURIComponent(id)}`,{method:'DELETE'});
       try{await nativeFetch(`/api/program-template?eventId=${encodeURIComponent(id)}`,{method:'DELETE'})}catch{}
       await recordApi(`/api/record?type=event&id=${encodeURIComponent(id)}`,{method:'DELETE'});
       selectedArchiveId='';
