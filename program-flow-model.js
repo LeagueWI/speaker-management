@@ -32,7 +32,7 @@ function minutes(value){
  const start=timeKey(value).split('-')[0];
  const n=Number(start);return start!==''&&Number.isFinite(n)?n:1500;
 }
-function compare(a,b){return norm(a.date).localeCompare(norm(b.date))||minutes(a.time)-minutes(b.time)||norm(a.time).localeCompare(norm(b.time))||norm(a.title).localeCompare(norm(b.title));}
+function compare(a,b){return norm(a.date).localeCompare(norm(b.date))||minutes(a.time)-minutes(b.time)||timeKey(a.time).localeCompare(timeKey(b.time))||norm(a.title).localeCompare(norm(b.title))||norm(a.time).localeCompare(norm(b.time));}
 function slotKey(s){return norm(s.date)+'|'+timeKey(s.time);}
 function stableId(s){
  const key=slotKey(s),hash=Array.from(key).reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619)>>>0,2166136261);
