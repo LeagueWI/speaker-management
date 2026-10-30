@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-for js in app.js lazy-tools.js archive-tools.js email-center.js program-flow.js program-structure.js; do
+for js in app.js lazy-tools.js archive-tools.js email-center.js program-flow.js program-structure.js structured-word.js; do
   node --check "$js"
 done
 
@@ -13,6 +13,7 @@ cp styles.css public/styles.css
 cp bridge-test.html public/bridge-test.html
 cp program-flow.js public/program-flow.js
 cp program-structure.js public/program-structure.js
+cp structured-word.js public/structured-word.js
 cp program-flow-starter.docx public/program-flow-starter.docx
 cp email-center.js public/email-center.js
 cp lazy-tools.js public/lazy-tools.js
