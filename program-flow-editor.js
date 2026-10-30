@@ -82,7 +82,7 @@ async function refresh(preferred=''){
 }
 function loadRows(){
  const flow=data.programFlows.find(x=>x.eventId===eventId||x.id===eventId);
- rows=model.reconcile(flow?.rows,data.sessions,eventId);dirty=false;render();
+ rows=model.reconcile(flow?.rows,data.sessions,eventId,data.programBlocks);dirty=false;render();
  message('Program assembled from your existing session records. Arrange it below, then export to Word.');
 }
 function rowMove(id,direction){const p=ix(id),q=p+direction;if(p<0||q<0||q>=rows.length)return;[rows[p],rows[q]]=[rows[q],rows[p]];changed();}
@@ -158,7 +158,7 @@ function init(){
  if(!view||!list||$('programFlowEditorPanel'))return;
  const div=document.createElement('section');div.className='panel';div.id='programFlowEditorPanel';
  div.innerHTML=[
- '<div class="toolbar"><div><h3>Program Flow Editor</h3><p class="hint">The schedule is assembled from your sessions. Arrange it visually, then export to Word. No separate track or block setup.</p></div><button type="button" class="btn small" id="pfeRefresh">Refresh sessions</button></div>',
+ '<div class="toolbar"><div><h3>Program Flow Editor</h3><p class="hint">The schedule is assembled from your sessions. Arrange it visually, then export to Word. No additional scheduling setup.</p></div><button type="button" class="btn small" id="pfeRefresh">Refresh sessions</button></div>',
  '<div class="field"><label for="pfeEvent">Event</label><select id="pfeEvent"></select></div>',
  '<div id="pfeEditor" hidden><div class="toolbar"><div class="toolbar-left"><button type="button" class="btn small" id="pfeAddHeading">+ Section heading</button><button type="button" class="btn small" id="pfeAddActivity">+ Agenda item</button></div>',
  '<div class="toolbar-left"><button type="button" class="btn small" id="pfeRebuild">Rebuild from sessions</button><button type="button" class="btn" id="pfeSave">Save layout</button><button type="button" class="btn primary" id="pfeExport">Export Word</button></div></div>',
@@ -190,7 +190,7 @@ function init(){
  $('pfeExport').addEventListener('click',exportDoc);
  $('pfeRebuild').addEventListener('click',()=>{
   if(!confirm('Rebuild from the sessions? Custom arrangement, headings and agenda-only items will be cleared. No session or speaker records will be changed.'))return;
-  rows=model.build(data.sessions,eventId);changed();
+  rows=model.build(data.sessions,eventId,data.programBlocks);changed();
  });
  $('pfeAddHeading').addEventListener('click',()=>editItem(null,'heading'));
  $('pfeAddActivity').addEventListener('click',()=>editItem(null,'activity'));
