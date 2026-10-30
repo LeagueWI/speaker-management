@@ -99,6 +99,6 @@
   $('downloadTemplateBtn').onclick=downloadTemplate;$('exportDataBtn').onclick=exportData;$('excelUpload').onchange=e=>importExcel(e.target.files[0]);
   $('emailEventFilter').onchange=renderRecipients;$('emailStatusFilter').onchange=renderRecipients;$('emailTemplate').onchange=e=>applyTemplate(e.target.value);$('previewEmailBtn').onclick=previewEmail;$('openEmailClientBtn').onclick=openEmailClient;
   $('saveSettingsBtn').onclick=()=>{settings={fromName:norm($('settingFromName').value),fromEmail:norm($('settingFromEmail').value)};saveSettings();renderSettings();alert('Defaults saved.')};
-  window.LeagueSharedState=()=>state;window.SM={editEvent:id=>openEventDialog(eventById(id)),deleteEvent,editSession:id=>openSessionDialog(sessionById(id)),deleteSession,editSpeaker:id=>openSpeakerDialog(state.speakers.find(s=>s.id===id)),deleteSpeaker};
+  window.LeagueSharedState=()=>state;window.LeagueRefreshSharedState=loadSharedState;window.SM={editEvent:id=>openEventDialog(eventById(id)),deleteEvent,editSession:id=>openSessionDialog(sessionById(id)),deleteSession,editSpeaker:id=>openSpeakerDialog(state.speakers.find(s=>s.id===id)),deleteSpeaker};
   applyTemplate('materials');renderSettings();renderAll();loadSharedState();
 })();
