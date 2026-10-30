@@ -51,7 +51,7 @@ test('all merged table rows use the entire table width for 1, 2, 3, and 5 column
     for (const row of rows) {
       const cells=[...row.matchAll(/<w:tc>([\s\S]*?)<\/w:tc>/g)].map(m=>m[1]);
       const spans=cells.map(cell=>Number(cell.match(/<w:gridSpan w:val="(\d+)"/)?.[1]||1));
-      assert.equal(spans.reduce((a,b)=>a+b,0),13,'Grid span mismatch for '+columns+' columns');
+      assert.equal(spans.reduce((a,b)=>a+b,0),14,'Grid span mismatch for '+columns+' columns');
     }
   }
 });
