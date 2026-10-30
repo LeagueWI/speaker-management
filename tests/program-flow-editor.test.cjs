@@ -21,7 +21,7 @@ test('auto groups only concurrent sessions for the selected event',()=>{
  const rows=model.build(sessions,'e');
  assert.equal(rows.length,3);
  assert.equal(rows[0].sessionIds[0],'a');
- assert.deepEqual(Array.from(rows[1].sessionIds),['b','c']);
+ assert.deepEqual(Array.from(rows[1].sessionIds),['c','b']);
  assert.equal(rows[2].sessionIds[0],'d');
 });
 
@@ -33,7 +33,7 @@ test('preserves manual headings, agenda items and ordered sessions after session
  const updated=model.reconcile(rows,newer,'e');
  assert.equal(updated.some(x=>x.id==='break'&&x.title==='BREAK'),true);
  assert.equal(updated.find(x=>x.id===group.id).heading,'Concurrent Breakouts');
- assert.deepEqual(Array.from(updated.find(x=>x.id===group.id).sessionIds),['c','b']);
+ assert.deepEqual(Array.from(updated.find(x=>x.id===group.id).sessionIds),['b','c']);
  assert.equal(updated.some(x=>x.sessionIds.includes('new')),true);
  assert.equal(updated.flatMap(x=>x.sessionIds).filter(x=>x==='b').length,1);
 });
@@ -70,4 +70,34 @@ test('Word output excludes speakers marked declined',()=>{
  const fixture=data(rows);
  fixture.speakers.push({id:'declined',sessionId:'c',firstName:'Declined',lastName:'Person',speakerStatus:'Declined'});
  assert.doesNotMatch(word.documentXML(fixture,'e'),/Declined Person/);
+});
+
+test('time formats are normalized before grouping',()=>{
+ assert.equal(model.timeKey('10:30–11:20 AM'),model.timeKey('10:30 AM - 11:20 A.M.'));
+ assert.equal(model.timeKey('12:30–1:50 PM'),model.timeKey('12:30 PM–1:50 PM'));
+ const rows=model.build([
+  {id:'f1',eventId:'e',date:'2027-05-13',time:'10:30–11:20 AM',title:'Track 1'},
+  {id:'f2',eventId:'e',date:'2027-05-13',time:'10:30 AM - 11:20 AM',title:'Track 2'}
+ ],'e');
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].sessionIds.length,2);
+});
+test('schedule edits move sessions to the correct time without changing saved agenda items',()=>{
+ const initial=model.build(sessions,'e');
+ initial.push({id:'coffee',kind:'activity',date:'2027-05-13',time:'10:20–10:30 AM',title:'Coffee',sessionIds:[]});
+ const updated=sessions.map(s=>s.id==='b'?{...s,date:'2027-05-14',time:'1:00 PM'}:s);
+ const rows=model.reconcile(initial,updated,'e');
+ assert.equal(rows.some(r=>r.id==='coffee'),true);
+ assert.equal(rows.find(r=>r.sessionIds.includes('b')).date,'2027-05-14');
+ assert.equal(rows.flatMap(r=>r.sessionIds).filter(id=>id==='b').length,1);
+});
+test('existing agenda-only activity blocks are copied into initial program flow',()=>{
+ const legacy=[
+  {id:'reg',eventId:'e',date:'2027-05-13',time:'8:00 AM',kind:'activity',title:'Registration'},
+  {id:'group',eventId:'e',date:'2027-05-13',time:'10:30–11:20 AM',kind:'sessions',title:'Breakout Sessions 1'}
+ ];
+ const rows=model.build(sessions,'e',legacy);
+ assert.ok(rows.some(r=>r.title==='Registration'));
+ assert.ok(rows.some(r=>r.heading==='Breakout Sessions 1'));
+ assert.equal(rows.flatMap(r=>r.sessionIds).filter(id=>id==='b').length,1);
 });
