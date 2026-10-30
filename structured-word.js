@@ -34,9 +34,10 @@ function speakersOf(s,session){
  return (s.speakers||[]).filter(p=>p.sessionId===session.id&&p.speakerStatus!=='Declined')
    .map(p=>[[(p.firstName||''),(p.lastName||'')].filter(Boolean).join(' ').trim(),p.title,p.organization].filter(Boolean).join(', ')).filter(Boolean);
 }
+function roomFor(s,x){if(String(x.room||'').trim())return x.room;const b=(s.programBlocks||[]).find(b=>b.id===x.blockId),e=s.events.find(e=>e.id===x.eventId),l=(e?.programLayouts||[]).find(l=>l.id===b?.layoutId),c=l?.columns?.find(c=>c.id===x.columnId);return c?.room||'';}
 function sessionParagraphs(s,x,showRoom=true){
  const parts=[para(x.title||'Untitled session',{bold:true,size:19})];
- if(showRoom&&x.room)parts.push(para('Room: '+x.room,{size:16,color:'526574'}));
+ if(showRoom&&roomFor(s,x))parts.push(para('Room: '+roomFor(s,x),{size:16,color:'526574'}));
  const speakers=speakersOf(s,x);
  if(speakers.length){parts.push(para('Speakers:',{bold:true,size:16}));speakers.forEach(p=>parts.push(para(p,{size:16})));}
  if(x.notes)parts.push(para(x.notes,{size:15,color:'526574'}));
@@ -88,7 +89,7 @@ function makeTable(s,id){
     const parts=[para(col.name||'Track',{bold:true,size:18,center:true})];
     if(col.room)parts.push(para('Room: '+col.room,{size:15,center:true,color:'526574'}));
     if(!group.length)parts.push(para('No session assigned',{italic:true,size:16,color:'66788A'}));
-    for(const ses of group)parts.push(...sessionParagraphs(s,ses));
+    for(const ses of group)parts.push(...sessionParagraphs(s,ses,Boolean(ses.room&&ses.room!==col.room)));
     cells.push(cell(parts,spans[index],'FFFFFF'));
    }
    const leftovers=assigned.filter(x=>!columns.some(c=>c.id===x.columnId));
@@ -101,7 +102,7 @@ function makeTable(s,id){
      const x=assigned[i];
      tableRows.push(row([timeCell([para(b.time||x.time||'',{size:17})]),
        cell(sessionParagraphs(s,x,false),12,i===0?'EDEDED':'FFFFFF'),
-       notesCell([...(x.room?[para(x.room,{size:16})]:[]),...(b.notes?[para(b.notes,{size:15})]:[])])]));
+       notesCell([...(roomFor(s,x)?[para(roomFor(s,x),{size:16})]:[]),...(b.notes?[para(b.notes,{size:15})]:[])])]));
     }
    }else{
     tableRows.push(row([timeCell([para(b.time||'',{size:17})]),cell([para(b.title||'Session TBD',{bold:true,size:18})],12,'EDEDED'),notesCell(b.notes?[para(b.notes,{size:15})]:[])]));
