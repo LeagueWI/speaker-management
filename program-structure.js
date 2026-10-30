@@ -13,10 +13,14 @@ const clean=s=>String(s??'').trim();
 let data={events:[],sessions:[],speakers:[],programBlocks:[]};
 let draft=[];
 let selectedEvent='';
+let blockEditorEvent='';
+let returnToSession=false;
 const lookup=id=>data.events.find(x=>x.id===id);
 const block=id=>data.programBlocks.find(x=>x.id===id);
 const layouts=id=>Array.isArray(lookup(id)?.programLayouts)?lookup(id).programLayouts:[];
 const current=e=>!(window.SMArchive?.isArchived?.(e)??(e.status==='Archived'));
+function trackFor(s){const b=block(s?.blockId),l=layouts(s?.eventId||b?.eventId).find(l=>l.id===b?.layoutId);return l?.columns?.find(c=>c.id===s?.columnId)||null;}
+function effectiveRoom(s){return clean(s?.room)||clean(trackFor(s)?.room)||'';}
 const byDate=(a,b)=>(a.date||'').localeCompare(b.date||'')||(Number(a.order)||0)-(Number(b.order)||0)||(a.time||'').localeCompare(b.time||'')||(a.title||'').localeCompare(b.title||'');
 async function api(path,options={}){
  const r=await fetch(path,{...options,headers:{'content-type':'application/json',...(options.headers||{})}});
@@ -27,7 +31,7 @@ async function api(path,options={}){
 function layoutEditor(){
  const host=$('eventLayoutRows');if(!host)return;
  host.innerHTML=draft.length?draft.map((layout,index)=>{
- const columns=(layout.columns||[]).map((column,i)=>'<div class="ps-column"><input data-field="columnName" data-layout="'+index+'" data-column="'+i+'" aria-label="Column '+(i+1)+' name" placeholder="Track '+(i+1)+'" value="'+esc(column.name)+'"><input data-field="columnRoom" data-layout="'+index+'" data-column="'+i+'" aria-label="Column '+(i+1)+' default room" placeholder="Default room (optional)" value="'+esc(column.room||'')+'"><button type="button" class="btn small" data-remove-column="'+index+':'+i+'" title="Remove column">Remove</button></div>').join('');
+ const columns=(layout.columns||[]).map((column,i)=>'<div class="ps-column"><input data-field="columnName" data-layout="'+index+'" data-column="'+i+'" aria-label="Column '+(i+1)+' name" placeholder="Track '+(i+1)+'" value="'+esc(column.name)+'"><input data-field="columnRoom" data-layout="'+index+'" data-column="'+i+'" aria-label="Column '+(i+1)+' default room" placeholder="Default track room (optional)" value="'+esc(column.room||'')+'"><button type="button" class="btn small" data-remove-column="'+index+':'+i+'" title="Remove column">Remove</button></div>').join('');
  return '<div class="ps-layout"><div class="toolbar"><input data-field="layoutName" data-layout="'+index+'" aria-label="Layout name" value="'+esc(layout.name)+'" placeholder="e.g., Breakout tracks"><button type="button" class="btn small danger" data-remove-layout="'+index+'">Remove layout</button></div><div class="ps-columns">'+columns+'</div><button type="button" class="btn small" data-add-column="'+index+'">+ Add column</button></div>';
  }).join(''):'<p class="hint">No multi-column layouts. Your program will use full-width activities and sessions.</p>';
 }
@@ -55,12 +59,15 @@ function validateLayouts(next,old,state){
  return '';
 }
 function option(value,label,selected){return '<option value="'+esc(value)+'"'+(value===selected?' selected':'')+'>'+esc(label)+'</option>';}
-function renderBlockSelect(eventId,selected){
+function renderBlockSelect(eventId,selected,preferredColumn=''){
  const select=$('sessionBlockId');if(!select)return;
- const list=data.programBlocks.filter(b=>b.eventId===eventId&&b.kind!=='activity').sort(byDate);
- select.innerHTML=option('','Not assigned','')+list.map(b=>option(b.id,(b.date||'No date')+' '+(b.time||'')+'  '+b.title,selected)).join('');
+ const list=(data.programBlocks||[]).filter(b=>b.eventId===eventId&&b.kind!=='activity').sort(byDate);
+ const hint=$('sessionBlockHint');
+ select.innerHTML=option('','Not assigned','')+list.map(b=>option(b.id,(b.date||'No date')+'  '+(b.time||'')+'  '+b.title,selected)).join('');
  select.value=list.some(x=>x.id===selected)?selected:'';
- renderColumnSelect();
+ if(hint)hint.textContent=!eventId?'Choose an event first.':!list.length?'No scheduled blocks yet. Track layouts only define the columns. Select “Create program block” to add a date, time, and layout.':list.length+' scheduled block(s) available. Choose one to assign this session.';
+ if($('sessionNewBlockBtn'))$('sessionNewBlockBtn').disabled=!eventId;
+ renderColumnSelect(preferredColumn);
 }
 function renderColumnSelect(preferred){
  const blockId=$('sessionBlockId')?.value||'',b=block(blockId),layout=layouts(b?.eventId).find(l=>l.id===b?.layoutId),select=$('sessionColumnId');
@@ -73,13 +80,27 @@ function renderColumnSelect(preferred){
  if(b){
   $('sessionDate').value=b.date||'';
   $('sessionTime').value=b.time||'';
-  const column=cols.find(c=>c.id===select.value);
-  if(column?.room&&!clean($('sessionRoom').value))$('sessionRoom').value=column.room;
  }
  $('sessionDate').readOnly=!!b;
  $('sessionTime').readOnly=!!b;
+ updateRoomHint();
 }
-function openSession(s,eventId){renderBlockSelect(eventId,s?.eventId===eventId?s?.blockId||'':'');renderColumnSelect(s?.columnId||'');}
+function updateRoomHint(){
+ const b=block($('sessionBlockId')?.value),l=layouts(b?.eventId).find(x=>x.id===b?.layoutId);
+ const col=l?.columns?.find(c=>c.id===$('sessionColumnId')?.value);
+ const room=clean(col?.room);
+ const hint=$('sessionRoomHint'),label=$('sessionRoomLabel'),input=$('sessionRoom');
+ if(!input)return;
+ if(label)label.textContent=room?'Room override (optional)':'Room';
+ if(room){
+  input.placeholder=room;
+  if(hint)hint.textContent='Default room: '+room+' ('+col.name+'). Leave blank to use this room. Enter a value only when this session is elsewhere.';
+ }else{
+  input.placeholder='Enter room (optional)';
+  if(hint)hint.textContent=col?'No room is configured for '+col.name+'. Enter a room here, or add a default room in Event → Program layouts.':'Enter a room for this session if needed.';
+ }
+}
+function openSession(s,eventId){renderBlockSelect(eventId,s?.eventId===eventId?s?.blockId||'':'',s?.columnId||'');}
 function sessionAssignment(eventId){
  const b=block($('sessionBlockId')?.value);
  if(!b||b.eventId!==eventId||b.kind==='activity')return {blockId:'',columnId:''};
@@ -107,6 +128,7 @@ function ensureUI(){
  document.body.appendChild(dialog);
  $('psEvent').addEventListener('change',()=>{selectedEvent=$('psEvent').value;renderBlocks();});
  $('psAddBlock').addEventListener('click',()=>openBlock());
+ $('sessionNewBlockBtn').addEventListener('click',()=>{const eventId=$('sessionEventId').value;if(!eventId)return alert('Select an event first.');openBlock(null,eventId);});
  $('psSave').addEventListener('click',saveBlock);
  $('psKind').addEventListener('change',()=>{$('psLayout').disabled=$('psKind').value==='activity';});
  $('psBlockTable').addEventListener('click',e=>{
@@ -131,11 +153,7 @@ function ensureUI(){
  });
  $('sessionEventId').addEventListener('change',e=>renderBlockSelect(e.target.value,''));
  $('sessionBlockId').addEventListener('change',()=>renderColumnSelect());
- $('sessionColumnId').addEventListener('change',()=>{
-  const b=block($('sessionBlockId').value),l=layouts(b?.eventId).find(x=>x.id===b?.layoutId);
-  const col=l?.columns?.find(c=>c.id===$('sessionColumnId').value);
-  if(col?.room&&!clean($('sessionRoom').value))$('sessionRoom').value=col.room;
- });
+ $('sessionColumnId').addEventListener('change',updateRoomHint);
 }
 function refresh(next){
  if(next)data=next;
@@ -145,6 +163,10 @@ function refresh(next){
  selectedEvent=data.events.some(e=>e.id===old&&current(e))?old:'';
  el.value=selectedEvent;
  renderBlocks();
+ if($('sessionDialog')?.open){
+  const eventId=$('sessionEventId').value,chosen=$('sessionBlockId').value,col=$('sessionColumnId').value;
+  renderBlockSelect(eventId,chosen,col);
+ }
 }
 function renderBlocks(){
  const host=$('psBlockTable');if(!host)return;
@@ -159,30 +181,34 @@ function renderBlocks(){
   return '<tr><td>'+esc(b.date||'')+'<br><span class="muted">'+esc(b.time||'')+'</span></td><td><strong>'+esc(b.title)+'</strong><br><span class="muted">'+(b.kind==='activity'?'Activity / break':'Scheduled sessions')+'</span></td><td>'+esc(l?.name||'Full width')+'</td><td>'+sessions.length+'</td><td><button type="button" class="btn small" data-ps-edit="'+esc(b.id)+'">Edit</button> <button type="button" class="btn small danger" data-ps-delete="'+esc(b.id)+'">Delete</button></td></tr>';
  }).join('')+'</tbody></table>';
 }
-function openBlock(b){
- if(!selectedEvent)return;
+function openBlock(b,eventOverride=''){
+ const eventId=eventOverride||b?.eventId||selectedEvent;
+ if(!eventId)return;
+ blockEditorEvent=eventId;
+ returnToSession=Boolean(eventOverride&&$('sessionDialog')?.open);
  $('psDialogTitle').textContent=b?'Edit program block':'Add program block';
  $('psBlockId').value=b?.id||'';
  $('psTitle').value=b?.title||'';
- $('psDate').value=b?.date||lookup(selectedEvent)?.startDate||'';
+ $('psDate').value=b?.date||lookup(eventId)?.startDate||'';
  $('psTime').value=b?.time||'';
  $('psKind').value=b?.kind||'sessions';
- $('psOrder').value=b?.order??(data.programBlocks.filter(x=>x.eventId===selectedEvent).length+1)*10;
+ $('psOrder').value=b?.order??(data.programBlocks.filter(x=>x.eventId===eventId).length+1)*10;
  $('psNotes').value=b?.notes||'';
- $('psLayout').innerHTML=option('','Full width','')+layouts(selectedEvent).map(l=>option(l.id,l.name,b?.layoutId||'')).join('');
+ $('psLayout').innerHTML=option('','Full width','')+layouts(eventId).map(l=>option(l.id,l.name,b?.layoutId||'')).join('');
  $('psLayout').value=b?.layoutId||'';
  $('psLayout').disabled=$('psKind').value==='activity';
  $('psBlockDialog').showModal();
 }
 async function saveBlock(){
  const title=clean($('psTitle').value),date=$('psDate').value,time=clean($('psTime').value);
- if(!selectedEvent||!title||!date||!time)return alert('Program block title, date and time are required.');
+ const eventId=blockEditorEvent||selectedEvent;
+ if(!eventId||!title||!date||!time)return alert('Program block title, date and time are required.');
  const old=block($('psBlockId').value),kind=$('psKind').value,layoutId=kind==='activity'?'':$('psLayout').value;
- const linked=data.sessions.filter(s=>s.blockId===old?.id);
+ const linked=old?data.sessions.filter(s=>s.blockId===old.id):[];
  if(kind==='activity'&&linked.length)return alert('Move the '+linked.length+' assigned session(s) before changing this block to an activity.');
- const newLayout=layouts(selectedEvent).find(l=>l.id===layoutId);
+ const newLayout=layouts(eventId).find(l=>l.id===layoutId);
  const validCol=new Set((newLayout?.columns||[]).map(c=>c.id));
- const rec={id:old?.id||uid('block'),eventId:selectedEvent,title,date,time,kind,layoutId,order:Number($('psOrder').value)||0,notes:clean($('psNotes').value)};
+ const rec={id:old?.id||uid('block'),eventId,title,date,time,kind,layoutId,order:Number($('psOrder').value)||0,notes:clean($('psNotes').value)};
  const records=[{type:'program-block',id:rec.id,payload:{...rec}}];
  delete records[0].payload.id;
  for(const s of linked){
@@ -196,6 +222,8 @@ async function saveBlock(){
   if(response.failed)throw Error('Some records were not saved. Refresh before trying again.');
   $('psBlockDialog').close();
   await reload();
+  if(returnToSession&&$('sessionDialog')?.open&&$('sessionEventId').value===eventId&&kind!=='activity')renderBlockSelect(eventId,rec.id);
+  returnToSession=false;
  }catch(e){alert('Could not save program block: '+e.message);}
  finally{$('psSave').disabled=false;}
 }
@@ -216,6 +244,6 @@ async function reload(){
  if(window.LeagueRefreshSharedState)await window.LeagueRefreshSharedState();
  else {const r=await api('/api/state');refresh(r.state||{events:[],sessions:[],programBlocks:[]});}
 }
-window.ProgramStructure={refresh,openEvent,getLayouts,validateLayouts,openSession,sessionAssignment,validateSession};
+window.ProgramStructure={refresh,openEvent,getLayouts,validateLayouts,openSession,sessionAssignment,validateSession,effectiveRoom};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>refresh(window.LeagueSharedState?.()));else refresh(window.LeagueSharedState?.());
 })();

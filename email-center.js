@@ -21,6 +21,7 @@
   function eventById(id){return mailState.events.find(e=>e.id===id)}
   function sessionById(id){return mailState.sessions.find(s=>s.id===id)}
   function sessionForSpeaker(s){return sessionById(s?.sessionId)}
+  function roomForSession(s){if(!s)return'';if(String(s.room||'').trim())return s.room;const b=(mailState.programBlocks||[]).find(x=>x.id===s.blockId),e=eventById(s.eventId),l=(e?.programLayouts||[]).find(x=>x.id===b?.layoutId),c=l?.columns?.find(x=>x.id===s.columnId);return c?.room||'';}
   function fmtDate(v){if(!v)return'';const d=new Date(v+'T12:00:00');return Number.isNaN(d.getTime())?v:d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}
   function localSettings(){try{return{fromName:'',fromEmail:'',...JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}}catch{return{fromName:'',fromEmail:''}}}
 
@@ -141,7 +142,7 @@
 
   function merge(text,s){
     const e=eventById(s.eventId)||{},ses=sessionForSpeaker(s)||{};
-    const f={first_name:s.firstName,last_name:s.lastName,email:s.email,title:s.title,organization:s.organization,event_name:e.name,event_location:e.location,event_start_date:fmtDate(e.startDate),event_end_date:fmtDate(e.endDate),session_title:ses.title,session_date:fmtDate(ses.date),session_time:ses.time,room:ses.room};
+    const f={first_name:s.firstName,last_name:s.lastName,email:s.email,title:s.title,organization:s.organization,event_name:e.name,event_location:e.location,event_start_date:fmtDate(e.startDate),event_end_date:fmtDate(e.endDate),session_title:ses.title,session_date:fmtDate(ses.date),session_time:ses.time,room:roomForSession(ses)};
     return String(text||'').replace(/\{\{(\w+)\}\}/g,(_,k)=>f[k]??'');
   }
 

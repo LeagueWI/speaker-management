@@ -65,3 +65,15 @@ test('unassigned sessions are preserved instead of being dropped',()=>{
 test('missing events are reported',()=>{
   assert.throws(()=>documentXML(fixture(),'not_an_event'),/Event not found/);
 });
+
+test('track room is inherited unless an individual session overrides it',()=>{
+  const data=fixture();
+  data.sessions.find(s=>s.id==='s2').room='';
+  let xml=documentXML(data,'e');
+  assert.match(xml,/Room 1/);
+  assert.doesNotMatch(xml,/Room: A/);
+  data.sessions.find(s=>s.id==='s2').room='Overflow Room';
+  xml=documentXML(data,'e');
+  assert.match(xml,/Overflow Room/);
+  assert.match(xml,/Room 1/);
+});
