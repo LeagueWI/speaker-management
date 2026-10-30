@@ -204,7 +204,7 @@ async function saveBlock(){
  const eventId=blockEditorEvent||selectedEvent;
  if(!eventId||!title||!date||!time)return alert('Program block title, date and time are required.');
  const old=block($('psBlockId').value),kind=$('psKind').value,layoutId=kind==='activity'?'':$('psLayout').value;
- const linked=data.sessions.filter(s=>s.blockId===old?.id);
+ const linked=old?data.sessions.filter(s=>s.blockId===old.id):[];
  if(kind==='activity'&&linked.length)return alert('Move the '+linked.length+' assigned session(s) before changing this block to an activity.');
  const newLayout=layouts(eventId).find(l=>l.id===layoutId);
  const validCol=new Set((newLayout?.columns||[]).map(c=>c.id));
