@@ -15,7 +15,7 @@ The source of truth for title, session date/time, room, and speaker assignments 
 
 ## What happens to previous data
 
-The earlier Program Blocks and Event program layouts are **not deleted or migrated**. They remain stored in Jotform, and the new editor can still resolve inherited track rooms on historical sessions. The Program Structure setup interface is removed from the visible workflow.
+The earlier Program Blocks and Event program layouts are **not deleted**. The first program draft automatically carries over previously entered activity blocks, and uses existing concurrent block titles as section headings when possible. This is a non-destructive copy into the presentation layer. They remain stored in Jotform, and the new editor can still resolve inherited track rooms on historical sessions. The Program Structure setup interface is removed from the visible workflow.
 
 The saved presentation itself is held in a new Jotform `program-flow` record, keyed by the existing Event ID, containing only row order, optional headings, manual grouping, and agenda-only items. It does not change Session IDs, dates, times, speaker assignments, or the event record.
 
