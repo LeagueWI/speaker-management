@@ -33,7 +33,7 @@ function minutes(value){
  const n=Number(start);return start!==''&&Number.isFinite(n)?n:1500;
 }
 function compare(a,b){return norm(a.date).localeCompare(norm(b.date))||minutes(a.time)-minutes(b.time)||timeKey(a.time).localeCompare(timeKey(b.time))||norm(a.title).localeCompare(norm(b.title))||norm(a.time).localeCompare(norm(b.time));}
-function slotKey(s){return norm(s.date)+'|'+timeKey(s.time);}
+function slotKey(s){const date=norm(s.date),time=timeKey(s.time);return date&&time?date+'|'+time:date+'|unscheduled|'+norm(s.id);}
 function stableId(s){
  const key=slotKey(s),hash=Array.from(key).reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619)>>>0,2166136261);
  return 'auto_'+hash.toString(36);
@@ -88,7 +88,7 @@ function reconcile(saved,sessions,eventId,legacyBlocks=[]){
  const pending=list.filter(s=>!used.has(s.id));
  for(const s of pending){
   const key=slotKey(s);
-  let r=rows.find(x=>x.kind==='sessions'&&x.date===s.date&&timeKey(x.time)===timeKey(s.time));
+  let r=norm(s.date)&&norm(s.time)?rows.find(x=>x.kind==='sessions'&&x.date===s.date&&timeKey(x.time)===timeKey(s.time)):null;
   if(!r){
    r=makeRow(s);
    if(rows.some(x=>x.id===r.id))r.id+='_'+s.id;
